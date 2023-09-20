@@ -1,6 +1,10 @@
-import { StackContext, Api, EventBus, StaticSite } from 'sst/constructs'
+import { StackContext, Api, EventBus, StaticSite, Cron } from 'sst/constructs'
 
 export function TinierRSS({ stack }: StackContext) {
+  new Cron(stack, 'cron', {
+    job: 'packages/functions/src/cron.handler',
+    schedule: 'rate(5 minutes)',
+  })
   const api = new Api(stack, 'api', {
     defaults: {
       function: {
