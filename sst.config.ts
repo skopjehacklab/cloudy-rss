@@ -5,7 +5,7 @@ export default {
   config(_input) {
     return {
       name: 'tinier-rss',
-      region: 'eu-west-2',
+      region: 'eu-west-2', // Hardcoded to London for now
     }
   },
   stacks(app) {
