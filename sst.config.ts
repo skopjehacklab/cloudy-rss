@@ -1,5 +1,5 @@
 import { SSTConfig } from 'sst'
-import { TinierRSS } from './stacks/TinierRSS'
+import { CloudyRSS } from './stacks/CloudyRSS'
 
 export default {
   config(_input) {
@@ -9,6 +9,6 @@ export default {
     }
   },
   stacks(app) {
-    app.stack(TinierRSS)
+    app.stack(CloudyRSS)
   },
 } satisfies SSTConfig

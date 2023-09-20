@@ -1,6 +1,6 @@
 import { StackContext, Api, EventBus, StaticSite, Cron } from 'sst/constructs'
 
-export function TinierRSS({ stack }: StackContext) {
+export function CloudyRSS({ stack }: StackContext) {
   new Cron(stack, 'cron', {
     job: 'packages/functions/src/cron.handler',
     schedule: 'rate(5 minutes)',

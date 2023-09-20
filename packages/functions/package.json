@@ -1,5 +1,5 @@
 {
-  "name": "@tinier-rss/functions",
+  "name": "@cloudy-rss/functions",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
@@ -16,6 +16,6 @@
   "dependencies": {
     "electrodb": "^2.10.0",
     "uuid": "^9.0.1",
-    "@tinier-rss/shared": "file:@tinier-rss/shared"
+    "@cloudy-rss/shared": "file:@cloudy-rss/shared"
   }
 }

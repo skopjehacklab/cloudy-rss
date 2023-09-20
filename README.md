@@ -1,6 +1,6 @@
-# tinier-rss
+# cloudy-rss
 
-Serverless approximation of tiny-tiny-rss
+Serverless RSS reader
 
 Requirements
 - Login with OIDC, frontend-only

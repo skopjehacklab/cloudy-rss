@@ -1,5 +1,5 @@
 {
-  "name": "@tinier-rss/shared",
+  "name": "@cloudy-rss/shared",
   "version": "0.0.0",
   "type": "module",
   "types": "src/index.ts",

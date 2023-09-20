@@ -1,7 +1,7 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb'
 import { Entity, EntityRecord } from 'electrodb'
 
-import * as types from '@tinier-rss/shared'
+import * as types from '@cloudy-rss/shared'
 
 import { v4 as uuid } from 'uuid'
 import { assert } from 'console'
