@@ -4,7 +4,7 @@ Serverless approximation of tiny-tiny-rss
 
 Requirements
 - Login with OIDC, frontend-only
-- Allowlist for logins
+- Email allowlist for logins
 - Add feeds to sync
 - Refresh my feeds
 - Mark items read/unread
