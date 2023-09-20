@@ -4,7 +4,7 @@ import { CloudyRSS } from './stacks/CloudyRSS'
 export default {
   config(_input) {
     return {
-      name: 'tinier-rss',
+      name: 'cloudy-rss',
       region: 'eu-west-2', // Hardcoded to London for now
     }
   },

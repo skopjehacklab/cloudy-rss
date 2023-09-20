@@ -21,7 +21,7 @@
       </button>
       <div class="flex items-center">
 
-        <strong class="text-xl uppercase">Tinier RSS</strong>
+        <strong class="text-xl uppercase">Cloudy RSS</strong>
       </div>
 
       </svelte:fragment>
