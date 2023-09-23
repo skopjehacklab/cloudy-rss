@@ -52,6 +52,9 @@ type User = EntityItem<typeof UserTable>
 assertTypeExtends<types.User, User>()
 assertTypeExtends<User, types.User>()
 
+const FeedImageDefaultHeight = 31
+const FeedImageDefaultWidth = 88
+
 export let FeedTable = new Entity(
   {
     model: {
@@ -73,8 +76,8 @@ export let FeedTable = new Entity(
           title: { type: 'string', required: true },
           url: { type: 'string', required: true },
           description: { type: 'string' },
-          height: { type: 'number', default: () => 31 },
-          width: { type: 'number', default: () => 88 },
+          height: { type: 'number', default: FeedImageDefaultHeight },
+          width: { type: 'number', default: FeedImageDefaultWidth },
         },
       },
       lastBuildDate: { type: 'number' },
@@ -104,7 +107,7 @@ export let FeedTable = new Entity(
         readOnly: true,
         required: true,
       },
-      deleted: { type: 'boolean', required: true },
+      deleted: { type: 'boolean', required: true, default: false },
     },
     indexes: {
       byFeedId: {
@@ -217,11 +220,11 @@ export let FeedItemTable = new Entity({
     byFeedIdUpdatedAt: {
       index: 'gsi1pk-gsi1sk-index',
       pk: {
-        field: 'pk',
+        field: 'gsi1pk',
         composite: ['feedId'],
       },
       sk: {
-        field: 'sk',
+        field: 'gsi1sk',
         composite: ['updatedAt'],
       },
     },
@@ -246,15 +249,18 @@ export let UserSubscriptionTable = new Entity({
     createdAt: {
       type: 'number',
       default: () => Date.now(),
+      set: () => Date.now(),
       readOnly: true,
+      required: true,
     },
     updatedAt: {
       type: 'number',
       watch: '*',
       set: () => Date.now(),
       readOnly: true,
+      required: true,
     },
-    deleted: { type: 'boolean' },
+    deleted: { type: 'boolean', required: true, default: false },
   },
   indexes: {
     byUserId: {
@@ -264,17 +270,18 @@ export let UserSubscriptionTable = new Entity({
       },
       sk: {
         field: 'sk',
-        composite: ['updatedAt'],
+        composite: ['feedId'],
       },
     },
     byFeedId: {
+      index: 'gsi1pk-gsi1sk-index',
       // for fetching min update frequency
       pk: {
-        field: 'pk',
+        field: 'gsi1pk',
         composite: ['feedId'],
       },
       sk: {
-        field: 'sk',
+        field: 'gsi1sk',
         composite: ['updateFrequency'],
       },
     },
@@ -318,6 +325,17 @@ export let UserFeedItemReadTable = new Entity({
       },
       sk: {
         field: 'sk',
+        composite: ['feedItemId'],
+      },
+    },
+    byUserIdUpdatedAt: {
+      index: 'gsi1pk-gsi1sk-index',
+      pk: {
+        field: 'gsi1pk',
+        composite: ['userId'],
+      },
+      sk: {
+        field: 'gsi1sk',
         composite: ['updatedAt'],
       },
     },

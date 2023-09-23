@@ -1,32 +1,5 @@
-import { Feed, FeedItem, UserFeedItemRead, UserSubscription } from '@cloudy-rss/shared'
 import { FeedTable, FeedItemTable, UserFeedItemReadTable, UserSubscriptionTable } from './model'
-
-type Timestamp = number
-
-type PullMigration = {
-  from: number
-  tables: string[]
-  columns: { table: string; columns: string[] }[]
-}
-
-interface PullParameters {
-  lastPulledAt: Timestamp
-  schemaVersion: number
-  migration: null | PullMigration
-}
-
-type ChangeSpecs<T> = {
-  created: Array<T>
-  updated: Array<T>
-  deleted: Array<T>
-}
-
-type PullResponse = {
-  feeds: ChangeSpecs<Feed>
-  feedItems: ChangeSpecs<FeedItem>
-  userSubscriptions: ChangeSpecs<UserSubscription>
-  feedItemReads: ChangeSpecs<UserFeedItemRead>
-}
+import { ChangesObject, PullParameters } from './sync-types'
 
 function splitData<T extends { deleted: boolean; createdAt: number; updatedAt: number }>(
   data: T[],
@@ -40,8 +13,8 @@ function splitData<T extends { deleted: boolean; createdAt: number; updatedAt: n
   return { created, updated, deleted }
 }
 
-export async function pullChanges(userId: string, params: PullParameters): Promise<PullResponse> {
-  let pullResponse: PullResponse = {
+export async function pullChanges(userId: string, params: PullParameters): Promise<ChangesObject> {
+  let pullResponse: ChangesObject = {
     feeds: { created: [], updated: [], deleted: [] },
     feedItemReads: { created: [], updated: [], deleted: [] },
     feedItems: { created: [], updated: [], deleted: [] },
@@ -50,9 +23,7 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
 
   let userSubscriptions = await UserSubscriptionTable.query
     .byUserId({ userId })
-    .gt({
-      updatedAt: params.lastPulledAt,
-    })
+    .where((attr, op) => op.gt(attr.updatedAt, params.lastPulledAt))
     .go()
 
   pullResponse.userSubscriptions = splitData(userSubscriptions.data, params.lastPulledAt)
@@ -82,7 +53,7 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
   pullResponse.feedItems = splitData(allFeedItems, params.lastPulledAt)
 
   let feedItemReads = await UserFeedItemReadTable.query
-    .byUserId({ userId })
+    .byUserIdUpdatedAt({ userId })
     .gt({
       updatedAt: params.lastPulledAt,
     })
