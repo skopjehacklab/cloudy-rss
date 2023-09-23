@@ -57,30 +57,29 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
 
   pullResponse.userSubscriptions = splitData(userSubscriptions.data, params.lastPulledAt)
 
-  let feedItems: FeedItem[] = []
+  let userFeeds = await UserSubscriptionTable.query.byUserId({ userId }).go()
 
-  let feeds: Feed[] = []
+  let userFeedIds = userFeeds.data.map(x => x.feedId)
 
-  // Unfortunately, this is not quite right. A feed may've had new items synced
-  // even if the subscription was not updated. To fix this, we'd need to query
-  // the feed table for all feeds that have been synced since lastPulledAt and
-  // then query the feed item table for all items that have been synced since
-  for (let item of userSubscriptions.data) {
-    let feedId = item.feedId
-    let feedItemsForFeed = await FeedItemTable.query
-      .byFeedIdUpdatedAt({ feedId })
-      .gt({
-        updatedAt: params.lastPulledAt,
-      })
-      .go()
-    feedItems.push(...feedItemsForFeed.data)
+  // The user feeds list may be too large to send as filter expression to DynamoDB (4KB limit)
+  let feedsResult = (
+    await FeedTable.query.byLastUpdatedAt({}).gt({ updatedAt: params.lastPulledAt }).go()
+  ).data.filter(x => userFeedIds.includes(x.feedId))
 
-    // Unfortunately, could not find a way to do this in a single query
-    let feed = await FeedTable.query.byFeedId({ feedId }).go()
-    feeds.push(...feed.data)
-  }
-  pullResponse.feedItems = splitData(feedItems, params.lastPulledAt)
-  pullResponse.feeds = splitData(feeds, params.lastPulledAt)
+  pullResponse.feeds = splitData(feedsResult, params.lastPulledAt)
+
+  let allFeedItems = (
+    await Promise.all(
+      feedsResult.map(({ feedId }) =>
+        FeedItemTable.query
+          .byFeedIdUpdatedAt({ feedId })
+          .gt({ updatedAt: params.lastPulledAt })
+          .go()
+      )
+    )
+  ).flatMap(x => x.data)
+
+  pullResponse.feedItems = splitData(allFeedItems, params.lastPulledAt)
 
   let feedItemReads = await UserFeedItemReadTable.query
     .byUserId({ userId })

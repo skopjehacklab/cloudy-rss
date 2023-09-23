@@ -117,16 +117,28 @@ export let FeedTable = new Entity(
           composite: [],
         },
       },
-      // For efficient scheduled pulls
-      byUpdatedAt: {
+      // For efficient scheduled sync
+      bySyncCompletedAt: {
         index: 'gsi1pk-gsi1sk-index',
         pk: {
-          field: 'pk',
+          field: 'gsi1pk',
           composite: [],
         },
         sk: {
-          field: 'sk',
-          composite: ['updatedAt', 'url'],
+          field: 'gsi1sk',
+          composite: ['syncCompletedAt', 'url'],
+        },
+      },
+      // For efficient pulls
+      byLastUpdatedAt: {
+        index: 'gsi2pk-gsi2sk-index',
+        pk: {
+          field: 'gsi2pk',
+          composite: [],
+        },
+        sk: {
+          field: 'gsi2sk',
+          composite: ['lastUpdatedAt', 'url'],
         },
       },
     },
