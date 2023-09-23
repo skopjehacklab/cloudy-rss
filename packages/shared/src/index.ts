@@ -5,6 +5,15 @@ export type User = {
   updatedAt: number
 }
 
+export type FeedSyncronisation = {
+  feedId: string
+  url: string
+
+  syncStartedAt: number
+  syncCompletedAt: number
+  state: 'SYNCED' | 'SYNCING' | 'FAILED'
+}
+
 // See https://www.rssboard.org/rss-draft-1#element-channel-item-author
 
 export type Feed = {
@@ -31,10 +40,6 @@ export type Feed = {
   skipDays?: string[]
   skipHours?: number[]
   ttl?: number
-
-  syncStartedAt?: number
-  syncCompletedAt?: number
-  state: 'SYNCED' | 'SYNCING'
 
   updatedAt: number
   createdAt: number
@@ -63,8 +68,9 @@ export type FeedItem = {
 }
 
 export type UserSubscription = {
-  feedId: string
   userId: string
+  feedId: string
+  url: string
   requestedFrequency: number
   createdAt: number
   updatedAt: number

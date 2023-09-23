@@ -1,11 +1,33 @@
-import { StackContext, Api, EventBus, StaticSite, Cron } from 'sst/constructs'
+import { StackContext, Api, EventBus, StaticSite, Cron, Table } from 'sst/constructs'
 
 export function CloudyRSS({ stack }: StackContext) {
-  new Cron(stack, 'cron', {
+  let feeds = new Table(stack, 'feeds', {
+    fields: {
+      pk: 'string',
+      sk: 'string',
+      gsi1pk: 'string',
+      gsi1sk: 'string',
+    },
+    primaryIndex: {
+      partitionKey: 'pk',
+      sortKey: 'sk',
+    },
+    globalIndexes: {
+      'gsi1pk-gsi1sk-index': {
+        partitionKey: 'gsi1pk',
+        sortKey: 'gsi1sk',
+      },
+    },
+  })
+
+  let cron = new Cron(stack, 'cron', {
     job: 'packages/functions/src/cron.handler',
     schedule: 'rate(5 minutes)',
   })
-  const api = new Api(stack, 'api', {
+
+  cron.attachPermissions([feeds])
+
+  let api = new Api(stack, 'api', {
     defaults: {
       function: {
         timeout: 300,
@@ -17,7 +39,9 @@ export function CloudyRSS({ stack }: StackContext) {
     },
   })
 
-  const web = new StaticSite(stack, 'web', {
+  api.attachPermissions([feeds])
+
+  let web = new StaticSite(stack, 'web', {
     path: 'packages/frontend',
     buildOutput: 'dist',
     buildCommand: 'npm run build',

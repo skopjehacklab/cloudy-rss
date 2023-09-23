@@ -1,6 +1,12 @@
 // See https://watermelondb.dev/docs/Sync/Backend
 
-import { Feed, FeedItem, UserFeedItemRead, UserSubscription } from '@cloudy-rss/shared'
+import {
+  Feed,
+  FeedItem,
+  FeedSyncronisation,
+  UserFeedItemRead,
+  UserSubscription,
+} from '@cloudy-rss/shared'
 
 export type ChangeSpecs<T> = {
   created: Array<T>

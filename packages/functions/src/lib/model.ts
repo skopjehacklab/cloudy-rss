@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid'
 import * as types from '@cloudy-rss/shared'
 
 const client = new DynamoDB.DocumentClient()
-const table = 'electro'
+const table = 'feeds'
 
 function assertTypeExtends<_T extends U, U>() {}
 
@@ -52,6 +52,53 @@ type User = EntityItem<typeof UserTable>
 assertTypeExtends<types.User, User>()
 assertTypeExtends<User, types.User>()
 
+export let FeedSyncronisationTable = new Entity({
+  model: {
+    entity: 'feedSyncronisation',
+    version: '1',
+    service: 'store',
+  },
+  attributes: {
+    feedId: { type: 'string', required: true },
+    url: { type: 'string', required: true },
+    syncStartedAt: { type: 'number', required: true, default: 0 },
+    syncCompletedAt: { type: 'number', required: true, default: 0 },
+    state: { type: ['SYNCED', 'SYNCING', 'FAILED'] as const, required: true },
+  },
+  indexes: {
+    byUrl: {
+      pk: {
+        field: 'pk',
+        composite: ['url'],
+      },
+      sk: {
+        // We ideally want one record per url. However, race conditions may cause multiple
+        // simultaneous subscriptions to result in multiple records. A reconciliation process
+        // will ensure that only one record is kept per url.
+        field: 'sk',
+        composite: [],
+      },
+    },
+    // For efficient scheduled sync
+    bySyncCompletedAt: {
+      index: 'gsi1pk-gsi1sk-index',
+      pk: {
+        field: 'gsi1pk',
+        composite: [],
+      },
+      sk: {
+        field: 'gsi1sk',
+        composite: ['syncCompletedAt', 'url'],
+      },
+    },
+  },
+})
+
+type FeedSyncronisation = EntityItem<typeof FeedSyncronisationTable>
+
+assertTypeExtends<types.FeedSyncronisation, FeedSyncronisation>()
+assertTypeExtends<FeedSyncronisation, types.FeedSyncronisation>()
+
 const FeedImageDefaultHeight = 31
 const FeedImageDefaultWidth = 88
 
@@ -87,12 +134,6 @@ export let FeedTable = new Entity(
       skipHours: { type: 'list', items: { type: 'number' } },
       ttl: { type: 'number' },
 
-      syncStartedAt: { type: 'number' },
-      syncCompletedAt: {
-        type: 'number',
-      },
-      state: { type: ['SYNCED', 'SYNCING'] as const, required: true },
-
       updatedAt: {
         type: 'number',
         watch: '*',
@@ -120,8 +161,8 @@ export let FeedTable = new Entity(
           composite: [],
         },
       },
-      // For efficient scheduled sync
-      bySyncCompletedAt: {
+      // For efficient pulls
+      byLastUpdatedAt: {
         index: 'gsi1pk-gsi1sk-index',
         pk: {
           field: 'gsi1pk',
@@ -129,18 +170,6 @@ export let FeedTable = new Entity(
         },
         sk: {
           field: 'gsi1sk',
-          composite: ['syncCompletedAt', 'url'],
-        },
-      },
-      // For efficient pulls
-      byLastUpdatedAt: {
-        index: 'gsi2pk-gsi2sk-index',
-        pk: {
-          field: 'gsi2pk',
-          composite: [],
-        },
-        sk: {
-          field: 'gsi2sk',
           composite: ['lastUpdatedAt', 'url'],
         },
       },
@@ -153,29 +182,6 @@ type Feed = EntityItem<typeof FeedTable>
 
 assertTypeExtends<types.Feed, Feed>()
 assertTypeExtends<Feed, types.Feed>()
-
-/*
-type FeedItem = {
-  feedId: string
-  pubDate: number
-  guid: string
-  title: string
-  description: string
-  author: string
-  category?: string
-
-  link: string
-  enclosure: {
-    type: string
-    url: string
-    length: number
-  }
-
-  createdAt: number
-  updatedAt: number
-  deleted: boolean
-}
-*/
 
 export let FeedItemTable = new Entity({
   model: {
@@ -245,6 +251,7 @@ export let UserSubscriptionTable = new Entity({
   attributes: {
     userId: { type: 'string', required: true },
     feedId: { type: 'string', required: true },
+    url: { type: 'string', required: true },
     requestedFrequency: { type: 'number', required: true },
     createdAt: {
       type: 'number',
@@ -345,11 +352,3 @@ export let UserFeedItemReadTable = new Entity({
 type UserFeedItemRead = EntityRecord<typeof UserFeedItemReadTable>
 assertTypeExtends<types.UserFeedItemRead, UserFeedItemRead>()
 assertTypeExtends<UserFeedItemRead, types.UserFeedItemRead>()
-
-export let FeedDataSync = new Service(
-  {
-    feed: FeedTable,
-    feedItems: FeedItemTable,
-  },
-  { table, client }
-)
