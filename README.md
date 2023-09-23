@@ -9,7 +9,7 @@ Requirements
 - Refresh my feeds
 - Mark items read/unread
 - Offline-first, cache feed (and everything else) locally
-- Mobile friendly
+- PWA, Mobile friendly
 
 Technical requirements
 - Cheap scale-down - DynamoDB, Lambda
