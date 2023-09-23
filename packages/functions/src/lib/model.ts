@@ -1,18 +1,15 @@
 import DynamoDB from 'aws-sdk/clients/dynamodb'
-import { Entity, EntityRecord } from 'electrodb'
+import { Entity, EntityItem, EntityRecord, Service } from 'electrodb'
+import { v4 as uuid } from 'uuid'
 
 import * as types from '@cloudy-rss/shared'
 
-import { v4 as uuid } from 'uuid'
-import { assert } from 'console'
-import { type } from 'os'
 const client = new DynamoDB.DocumentClient()
-
 const table = 'electro'
 
 function assertTypeExtends<_T extends U, U>() {}
 
-const UserTable = new Entity(
+export let UserTable = new Entity(
   {
     model: {
       entity: 'user',
@@ -24,16 +21,17 @@ const UserTable = new Entity(
       email: { type: 'string', required: true },
       updatedAt: {
         type: 'number',
-        // watch for changes to any attribute
         watch: '*',
-        // set current timestamp when updated
         set: () => Date.now(),
         readOnly: true,
+        required: true,
       },
       createdAt: {
         type: 'number',
+        set: () => Date.now(),
         default: () => Date.now(),
         readOnly: true,
+        required: true,
       },
     },
     indexes: {
@@ -49,12 +47,12 @@ const UserTable = new Entity(
   { client, table }
 )
 
-type User = EntityRecord<typeof UserTable>
+type User = EntityItem<typeof UserTable>
 
 assertTypeExtends<types.User, User>()
 assertTypeExtends<User, types.User>()
 
-const FeedTable = new Entity(
+export let FeedTable = new Entity(
   {
     model: {
       entity: 'feed',
@@ -63,31 +61,50 @@ const FeedTable = new Entity(
     },
     attributes: {
       feedId: { type: 'string', required: true, default: () => uuid() },
+      title: { type: 'string', required: true },
+      category: { type: 'string', required: false },
+      description: { type: 'string', required: true },
       url: { type: 'string', required: true },
+      image: {
+        type: 'map',
+        required: false,
+        properties: {
+          link: { type: 'string', required: true },
+          title: { type: 'string', required: true },
+          url: { type: 'string', required: true },
+          description: { type: 'string' },
+          height: { type: 'number', default: () => 31 },
+          width: { type: 'number', default: () => 88 },
+        },
+      },
+      lastBuildDate: { type: 'number' },
+      pubDate: { type: 'number' },
+
+      skipDays: { type: 'list', items: { type: 'string' } },
+      skipHours: { type: 'list', items: { type: 'number' } },
+      ttl: { type: 'number' },
+
+      syncStartedAt: { type: 'number' },
+      syncCompletedAt: {
+        type: 'number',
+      },
+      state: { type: ['SYNCED', 'SYNCING'] as const, required: true },
+
       updatedAt: {
         type: 'number',
         watch: '*',
         set: () => Date.now(),
         readOnly: true,
+        required: true,
       },
       createdAt: {
         type: 'number',
+        set: () => Date.now(),
         default: () => Date.now(),
         readOnly: true,
+        required: true,
       },
-      syncStartedAt: {
-        type: 'number',
-        default: () => 0,
-      },
-      syncCompletedAt: {
-        type: 'number',
-        default: () => 0,
-      },
-      image: { type: 'string', required: false },
-      buildDate: { type: 'number' },
-      pubDate: { type: 'number' },
-      state: { type: ['SYNCED', 'SYNCING'] as const },
-      deleted: { type: 'boolean' },
+      deleted: { type: 'boolean', required: true },
     },
     indexes: {
       byFeedId: {
@@ -109,7 +126,7 @@ const FeedTable = new Entity(
         },
         sk: {
           field: 'sk',
-          composite: ['updatedAt'],
+          composite: ['updatedAt', 'url'],
         },
       },
     },
@@ -117,12 +134,35 @@ const FeedTable = new Entity(
   { client, table }
 )
 
-type Feed = EntityRecord<typeof FeedTable>
+type Feed = EntityItem<typeof FeedTable>
 
 assertTypeExtends<types.Feed, Feed>()
 assertTypeExtends<Feed, types.Feed>()
 
-let FeedItemTable = new Entity({
+/*
+type FeedItem = {
+  feedId: string
+  pubDate: number
+  guid: string
+  title: string
+  description: string
+  author: string
+  category?: string
+
+  link: string
+  enclosure: {
+    type: string
+    url: string
+    length: number
+  }
+
+  createdAt: number
+  updatedAt: number
+  deleted: boolean
+}
+*/
+
+export let FeedItemTable = new Entity({
   model: {
     entity: 'feedItem',
     version: '1',
@@ -135,18 +175,31 @@ let FeedItemTable = new Entity({
     title: { type: 'string', required: true },
     description: { type: 'string', required: true },
     link: { type: 'string', required: true },
+
+    author: { type: 'string' },
+    category: { type: 'string' },
+    enclosure: {
+      type: 'map',
+      properties: {
+        type: { type: 'string', required: true },
+        url: { type: 'string', required: true },
+        length: { type: 'number', required: true },
+      },
+    },
     createdAt: {
       type: 'number',
       default: () => Date.now(),
       readOnly: true,
+      required: true,
     },
     updatedAt: {
       type: 'number',
       watch: '*',
       set: () => Date.now(),
       readOnly: true,
+      required: true,
     },
-    deleted: { type: 'boolean' },
+    deleted: { type: 'boolean', required: true },
   },
   indexes: {
     byFeedIdUpdatedAt: {
@@ -163,12 +216,12 @@ let FeedItemTable = new Entity({
   },
 })
 
-type FeedItem = EntityRecord<typeof FeedItemTable>
+type FeedItem = EntityItem<typeof FeedItemTable>
 
 assertTypeExtends<types.FeedItem, FeedItem>()
 assertTypeExtends<FeedItem, types.FeedItem>()
 
-let UserSubscriptionTable = new Entity({
+export let UserSubscriptionTable = new Entity({
   model: {
     entity: 'userSubscription',
     version: '1',
@@ -199,7 +252,18 @@ let UserSubscriptionTable = new Entity({
       },
       sk: {
         field: 'sk',
+        composite: ['updatedAt'],
+      },
+    },
+    byFeedId: {
+      // for fetching min update frequency
+      pk: {
+        field: 'pk',
         composite: ['feedId'],
+      },
+      sk: {
+        field: 'sk',
+        composite: ['updateFrequency'],
       },
     },
   },
@@ -210,7 +274,7 @@ type UserSubscription = EntityRecord<typeof UserSubscriptionTable>
 assertTypeExtends<types.UserSubscription, UserSubscription>()
 assertTypeExtends<UserSubscription, types.UserSubscription>()
 
-let UserFeedItemReadTable = new Entity({
+export let UserFeedItemReadTable = new Entity({
   model: {
     entity: 'userFeedItemRead',
     version: '1',
@@ -224,12 +288,14 @@ let UserFeedItemReadTable = new Entity({
       type: 'number',
       default: () => Date.now(),
       readOnly: true,
+      required: true,
     },
     updatedAt: {
       type: 'number',
       watch: '*',
       set: () => Date.now(),
       readOnly: true,
+      required: true,
     },
   },
   indexes: {
@@ -240,7 +306,7 @@ let UserFeedItemReadTable = new Entity({
       },
       sk: {
         field: 'sk',
-        composite: ['feedItemId'],
+        composite: ['updatedAt'],
       },
     },
   },
@@ -249,3 +315,11 @@ let UserFeedItemReadTable = new Entity({
 type UserFeedItemRead = EntityRecord<typeof UserFeedItemReadTable>
 assertTypeExtends<types.UserFeedItemRead, UserFeedItemRead>()
 assertTypeExtends<UserFeedItemRead, types.UserFeedItemRead>()
+
+export let FeedDataSync = new Service(
+  {
+    feed: FeedTable,
+    feedItems: FeedItemTable,
+  },
+  { table, client }
+)
