@@ -1,5 +1,5 @@
 import { Feed, FeedItem, UserFeedItemRead, UserSubscription } from '@cloudy-rss/shared'
-import { FeedDataSync, FeedItemTable, UserFeedItemReadTable, UserSubscriptionTable } from './model'
+import { FeedTable, FeedItemTable, UserFeedItemReadTable, UserSubscriptionTable } from './model'
 
 type Timestamp = number
 
@@ -59,6 +59,12 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
 
   let feedItems: FeedItem[] = []
 
+  let feeds: Feed[] = []
+
+  // Unfortunately, this is not quite right. A feed may've had new items synced
+  // even if the subscription was not updated. To fix this, we'd need to query
+  // the feed table for all feeds that have been synced since lastPulledAt and
+  // then query the feed item table for all items that have been synced since
   for (let item of userSubscriptions.data) {
     let feedId = item.feedId
     let feedItemsForFeed = await FeedItemTable.query
@@ -68,8 +74,13 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
       })
       .go()
     feedItems.push(...feedItemsForFeed.data)
+
+    // Unfortunately, could not find a way to do this in a single query
+    let feed = await FeedTable.query.byFeedId({ feedId }).go()
+    feeds.push(...feed.data)
   }
   pullResponse.feedItems = splitData(feedItems, params.lastPulledAt)
+  pullResponse.feeds = splitData(feeds, params.lastPulledAt)
 
   let feedItemReads = await UserFeedItemReadTable.query
     .byUserId({ userId })
