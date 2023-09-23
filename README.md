@@ -16,10 +16,15 @@ Technical requirements
 
 
 
-## Architecture
+## Sketch architecture
 
 ```mermaid
 graph TD
+  DynamoDB[(DynamoDB)]
+  updateLambda[Update Lambda]
+  syncLambda[Sync Lambda]
+  watermelondb[(WatermelonDB)]
+
   cron --> updateLambda --> DynamoDB
   frontend --> watermelondb --> syncLambda --> DynamoDB
 ```
@@ -35,7 +40,7 @@ graph TD
  - OpenID - TODO
 
  ### Infra
- - IaC via SST - https://sst.dev/
+ - SST - https://sst.dev/
  - AWS
   - DynamoDB
   - Lambda
