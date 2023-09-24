@@ -1,8 +1,11 @@
 <script lang="ts">
 	import '../app.postcss';
-	import { AppBar, AppShell } from '@skeletonlabs/skeleton';
+  import {m} from '../model';
 
+	import { AppBar, AppShell } from '@skeletonlabs/skeleton';
   let ApiUrl = import.meta.env.VITE_PUBLIC_API_URL;
+
+  let feeds = m.feeds.query().observe()
 </script>
 
 <AppShell slotSidebarLeft="bg-surface-100-800-token w-0 lg:w-64 p-3">
@@ -38,8 +41,9 @@
     <!-- Insert the list: -->
     <nav class="list-nav">
       <ul>
-        <li><a href="/">Home</a></li>
-        <li><a href="/about">About</a></li>
+        {#each $feeds as feed}
+          <li><a href={feed.url}>{feed.title}</a></li>
+        {/each}
       </ul>
     </nav>
     <!-- --- -->
