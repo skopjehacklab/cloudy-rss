@@ -1,9 +1,15 @@
 import { Database, Model, appSchema, tableSchema } from '@nozbe/watermelondb'
 import { schemaMigrations } from '@nozbe/watermelondb/Schema/migrations'
 import { field, json, relation, text } from '@nozbe/watermelondb/decorators'
-import * as types from '@cloudy-rss/shared'
+import type * as types from '@cloudy-rss/shared'
+
+import { env } from '$env/dynamic/public'
+import { synchronize } from '@nozbe/watermelondb/sync'
 
 function assertTypeExtends<_T extends U, U>() {}
+
+type RelationKeys<T extends Model> = keyof T & `rel${string}`
+type OmitUnrelated<T extends Model> = Omit<T, keyof Model | RelationKeys<T>>
 
 let FeedsTable = tableSchema({
 	name: 'feeds',
@@ -28,7 +34,7 @@ let FeedsTable = tableSchema({
 	]
 })
 
-class Feed extends Model {
+export class Feed extends Model {
 	static table = 'feeds'
 
 	@field('feedId') feedId!: string
@@ -53,9 +59,12 @@ class Feed extends Model {
 	@field('updatedAt') updatedAt!: number
 	@field('createdAt') createdAt!: number
 	@field('deleted') deleted!: boolean
+
+	@relation('feedItems', 'feedId') relFeedItems!: FeedItem[]
+	@relation('userSubscription', 'feedId') relUserSubscription!: UserSubscription
 }
 
-type FeedType = Omit<Feed, keyof Model>
+type FeedType = OmitUnrelated<Feed>
 
 assertTypeExtends<FeedType, types.Feed>()
 assertTypeExtends<types.Feed, FeedType>()
@@ -78,7 +87,7 @@ let FeedItemsTable = tableSchema({
 	]
 })
 
-class FeedItem extends Model {
+export class FeedItem extends Model {
 	static table = 'feedItems'
 
 	@field('feedId') feedId!: string
@@ -97,9 +106,11 @@ class FeedItem extends Model {
 	@field('updatedAt') updatedAt!: number
 	@field('createdAt') createdAt!: number
 	@field('deleted') deleted!: boolean
+
+	@relation('feed', 'feedId') relFeed?: Feed
 }
 
-type FeedItemType = Omit<FeedItem, keyof Model>
+type FeedItemType = OmitUnrelated<FeedItem>
 
 assertTypeExtends<FeedItemType, types.FeedItem>()
 assertTypeExtends<types.FeedItem, FeedItemType>()
@@ -116,7 +127,7 @@ let UserSubscriptionsTable = tableSchema({
 	]
 })
 
-class UserSubscription extends Model {
+export class UserSubscription extends Model {
 	static table = 'userSubscriptions'
 
 	@field('feedId') feedId!: string
@@ -126,9 +137,11 @@ class UserSubscription extends Model {
 	@field('updatedAt') updatedAt!: number
 	@field('createdAt') createdAt!: number
 	@field('deleted') deleted!: boolean
+
+	@relation('feed', 'feedId') relFeed?: Feed
 }
 
-type UserSubscriptionType = Omit<UserSubscription, keyof Model>
+type UserSubscriptionType = OmitUnrelated<UserSubscription>
 
 assertTypeExtends<UserSubscriptionType, types.UserSubscription>()
 assertTypeExtends<types.UserSubscription, UserSubscriptionType>()
@@ -144,7 +157,7 @@ let UserFeedItemReadsTable = tableSchema({
 	]
 })
 
-class UserFeedItemRead extends Model {
+export class UserFeedItemRead extends Model {
 	static table = 'userFeedItemReads'
 
 	@field('userId') userId!: string
@@ -152,7 +165,14 @@ class UserFeedItemRead extends Model {
 	@field('deleted') deleted!: boolean
 	@field('createdAt') createdAt!: number
 	@field('updatedAt') updatedAt!: number
+
+	@relation('feedItem', 'feedItemId') relFeedItem!: FeedItem
 }
+
+type UserFeedItemReadType = OmitUnrelated<UserFeedItemRead>
+
+assertTypeExtends<UserFeedItemReadType, types.UserFeedItemRead>()
+assertTypeExtends<types.UserFeedItemRead, UserFeedItemReadType>()
 
 export let schema = appSchema({
 	version: 1,
@@ -209,4 +229,34 @@ export let m = {
 	feedItems: db.collections.get<FeedItem>('feedItems'),
 	userSubscriptions: db.collections.get<UserSubscription>('userSubscriptions'),
 	userFeedItemReads: db.collections.get<UserFeedItemRead>('userFeedItemReads')
+}
+
+const syncEndpoint = import.meta.env.VITE_SYNC_ENDPOINT
+
+export async function dbSync() {
+	await synchronize({
+		database: db,
+		pullChanges: async ({ lastPulledAt, schemaVersion, migration }) => {
+			const urlParams = `last_pulled_at=${lastPulledAt}&schema_version=${schemaVersion}&migration=${encodeURIComponent(
+				JSON.stringify(migration)
+			)}`
+			const response = await fetch(`${syncEndpoint}/sync?${urlParams}`)
+			if (!response.ok) {
+				throw new Error(await response.text())
+			}
+
+			const { changes, timestamp } = await response.json()
+			return { changes, timestamp }
+		},
+		pushChanges: async ({ changes, lastPulledAt }) => {
+			const response = await fetch(`${syncEndpoint}/sync?last_pulled_at=${lastPulledAt}`, {
+				method: 'POST',
+				body: JSON.stringify(changes)
+			})
+			if (!response.ok) {
+				throw new Error(await response.text())
+			}
+		},
+		migrationsEnabledAtVersion: 1
+	})
 }

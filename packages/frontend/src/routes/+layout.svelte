@@ -1,12 +1,17 @@
 <script lang="ts">
 	import '../app.postcss';
-  import {m} from '../model';
+	import { AppBar, AppShell, LightSwitch, Modal } from '@skeletonlabs/skeleton';
+  import { initializeStores } from '@skeletonlabs/skeleton';
 
-	import { AppBar, AppShell } from '@skeletonlabs/skeleton';
+  initializeStores();
+
+  import Sidebar from '../components/sidebar.svelte';
+
   let ApiUrl = import.meta.env.VITE_PUBLIC_API_URL;
 
-  let feeds = m.feeds.query().observe()
 </script>
+
+<Modal />
 
 <AppShell slotSidebarLeft="bg-surface-100-800-token w-0 lg:w-64 p-3">
   <svelte:fragment slot="header">
@@ -30,23 +35,14 @@
       </svelte:fragment>
 
 	    <svelte:fragment slot="trail">
-        action buttons
-
+        <LightSwitch />
       </svelte:fragment>
 
     </AppBar>
 
   </svelte:fragment>
   <svelte:fragment slot="sidebarLeft">
-    <!-- Insert the list: -->
-    <nav class="list-nav">
-      <ul>
-        {#each $feeds as feed}
-          <li><a href={feed.url}>{feed.title}</a></li>
-        {/each}
-      </ul>
-    </nav>
-    <!-- --- -->
+    <Sidebar />
   </svelte:fragment>
 
 	<slot />
