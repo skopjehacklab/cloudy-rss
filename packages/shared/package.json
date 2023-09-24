@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "type": "module",
   "types": "src/index.ts",
+  "exports": {
+    ".":"./src/index.ts"
+  },
   "scripts": {
     "test": "sst bind vitest",
     "typecheck": "tsc -noEmit"
