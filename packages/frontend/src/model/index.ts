@@ -120,6 +120,7 @@ let UserSubscriptionsTable = tableSchema({
 	columns: [
 		{ name: 'feedId', type: 'string', isIndexed: true },
 		{ name: 'userId', type: 'string' },
+		{ name: 'url', type: 'string' },
 		{ name: 'requestedFrequency', type: 'number' },
 		{ name: 'createdAt', type: 'number' },
 		{ name: 'updatedAt', type: 'number' },
@@ -190,7 +191,7 @@ import LokiJSAdapter from '@nozbe/watermelondb/adapters/lokijs'
 const adapter = new LokiJSAdapter({
 	schema,
 	// (Comment out migrations for development purposes)
-	// migrations,
+	migrations,
 	useWebWorker: false,
 	useIncrementalIndexedDB: true,
 	dbName: 'cloudyRSS',

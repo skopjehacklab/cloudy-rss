@@ -2,6 +2,7 @@
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
     "experimentalDecorators": true,
+    "target": "ES2021",
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,
