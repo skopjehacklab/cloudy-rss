@@ -1,6 +1,14 @@
-import { StackContext, Api, EventBus, StaticSite, Cron, Table } from 'sst/constructs'
+import { StackContext, Api, EventBus, StaticSite, Cron, Table, Config } from 'sst/constructs'
 
 export function CloudyRSS({ stack }: StackContext) {
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    throw new Error('Missing GOOGLE_CLIENT_ID')
+  }
+
+  if (!process.env.GOOGLE_CLIENT_SECRET) {
+    throw new Error('Missing GOOGLE_CLIENT_SECRET')
+  }
+
   let feeds = new Table(stack, 'feeds', {
     fields: {
       pk: 'string',
@@ -47,6 +55,8 @@ export function CloudyRSS({ stack }: StackContext) {
     buildCommand: 'npm run build',
     environment: {
       VITE_PUBLIC_API_URL: api.url,
+      VITE_GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      VITE_GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     },
   })
 
