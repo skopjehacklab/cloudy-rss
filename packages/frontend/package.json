@@ -15,7 +15,6 @@
 		"format": "prettier --plugin-search-dir . --write ."
 	},
 	"devDependencies": {
-		"@dopry/svelte-oidc": "^1.1.0",
 		"@nozbe/watermelondb": "^0.27.0",
 		"@playwright/test": "^1.28.1",
 		"@skeletonlabs/skeleton": "^2.1.0",
@@ -25,6 +24,7 @@
 		"@sveltejs/kit": "^1.20.4",
 		"@types/serviceworker": "^0.0.74",
 		"autoprefixer": "^10.4.14",
+		"oidc-client-ts": "^2.2.5",
 		"postcss": "^8.4.24",
 		"postcss-load-config": "^4.0.1",
 		"prettier": "^2.8.0",
