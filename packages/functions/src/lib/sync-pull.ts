@@ -13,7 +13,15 @@ function splitData<T extends { deleted: boolean; createdAt: number; updatedAt: n
   return { created, updated, deleted }
 }
 
-export async function pullChanges(userId: string, params: PullParameters): Promise<ChangesObject> {
+type ChangesResponse = {
+  changes: ChangesObject
+  timestamp: number
+}
+
+export async function pullChanges(
+  userId: string,
+  params: PullParameters
+): Promise<ChangesResponse> {
   let pullResponse: ChangesObject = {
     feeds: { created: [], updated: [], deleted: [] },
     feedItemReads: { created: [], updated: [], deleted: [] },
@@ -21,6 +29,7 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
     userSubscriptions: { created: [], updated: [], deleted: [] },
   }
 
+  let timestamp = Date.now()
   let userSubscriptions = await UserSubscriptionTable.query
     .byUserId({ userId })
     .where((attr, op) => op.gt(attr.updatedAt, params.lastPulledAt))
@@ -61,5 +70,5 @@ export async function pullChanges(userId: string, params: PullParameters): Promi
 
   pullResponse.feedItemReads = splitData(feedItemReads.data, params.lastPulledAt)
 
-  return pullResponse
+  return { changes: pullResponse, timestamp }
 }
