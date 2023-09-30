@@ -1,0 +1,12 @@
+{
+  "name": "Cloudy RSS",
+  "start_url": "/",
+  "display": "fullscreen",
+  "icons": [
+    {
+      "src": "favicon.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    }
+  ]
+}
