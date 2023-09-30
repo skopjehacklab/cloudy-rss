@@ -30,13 +30,11 @@
     <AppBar padding="py-3 px-4">
       <svelte:fragment slot="lead">
         <button class="lg:hidden btn btn-sm mr-4">
-          <span>
-            <svg viewBox="0 0 100 80" class="fill-token w-4 h-4">
-              <rect width="100" height="20" />
-              <rect y="30" width="100" height="20" />
-              <rect y="60" width="100" height="20" />
-            </svg>
-          </span>
+          <svg viewBox="0 0 100 80" class="fill-token w-4 h-4">
+            <rect width="100" height="20" />
+            <rect y="30" width="100" height="20" />
+            <rect y="60" width="100" height="20" />
+          </svg>
         </button>
         <div class="flex items-center">
           <strong class="text-xl uppercase">Cloudy RSS</strong>
