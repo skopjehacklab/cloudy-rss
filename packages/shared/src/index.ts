@@ -79,8 +79,37 @@ export type UserSubscription = {
 
 export type UserFeedItemRead = {
   userId: string
-  feedItemId: string
+  guid: string
   deleted: boolean
   createdAt: number
   updatedAt: number
+}
+
+// Sync types
+
+export type ChangeSpecs<T> = {
+  created: Array<T>
+  updated: Array<T>
+  deleted: Array<string>
+}
+
+export type Timestamp = number
+
+export interface PullParameters {
+  lastPulledAt: Timestamp
+  schemaVersion: number
+  migration: null | PullMigration
+}
+
+export type PullMigration = {
+  from: number
+  tables: string[]
+  columns: { table: string; columns: string[] }[]
+}
+
+export type ChangesObject = {
+  feeds: ChangeSpecs<Feed>
+  feedItems: ChangeSpecs<FeedItem>
+  userSubscriptions: ChangeSpecs<UserSubscription>
+  userFeedItemReads: ChangeSpecs<UserFeedItemRead>
 }

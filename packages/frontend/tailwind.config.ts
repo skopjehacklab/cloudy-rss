@@ -1,26 +1,39 @@
-import { join } from 'path';
-import type { Config } from 'tailwindcss';
+import type { Config } from 'tailwindcss'
 
-// 1. Import the Skeleton plugin
-import { skeleton } from '@skeletonlabs/tw-plugin';
+import * as colors from 'tailwindcss/colors'
 
 const config = {
-	// 2. Opt for dark mode to be handled via the class method
-	darkMode: 'class',
-	content: [
-		'./src/**/*.{html,js,svelte,ts}',
-		join(require.resolve('@skeletonlabs/skeleton'), '../**/*.{html,js,svelte,ts}')
-	],
-	theme: {
-		extend: {}
-	},
-	plugins: [
-		skeleton({
-			themes: { preset: ['wintry'] }
-		})
-	]
-} satisfies Config;
+  // 2. Opt for dark mode to be handled via the class method
+  darkMode: 'class',
+  content: [
+    './src/**/*.{html,js,svelte,ts}',
+    './node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}',
+    '../../node_modules/flowbite-svelte/**/*.{html,js,svelte,ts}'
+  ],
 
-export default config;
+  plugins: [require('flowbite/plugin')],
+  theme: {
+    extend: {
+      colors: {
+        // flowbite-svelte
+        primary: {
+          50: '#FFF5F2',
+          100: '#FFF1EE',
+          200: '#FFE4DE',
+          300: '#FFD5CC',
+          400: '#FFBCAD',
+          500: '#FE795D',
+          600: '#EF562F',
+          700: '#EB4F27',
+          800: '#CC4522',
+          900: '#A5371B'
+        },
+        gray: colors.stone
+      }
+    }
+  }
+} satisfies Config
 
-module.exports = config;
+export default config
+
+module.exports = config

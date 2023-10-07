@@ -36,14 +36,28 @@ export function CloudyRSS({ stack }: StackContext) {
   cron.attachPermissions([feeds])
 
   let api = new Api(stack, 'api', {
+    authorizers: {
+      googleAuth: {
+        type: 'jwt',
+        jwt: {
+          issuer: 'https://accounts.google.com',
+          audience: [process.env.GOOGLE_CLIENT_ID],
+        },
+      },
+    },
     defaults: {
+      authorizer: 'googleAuth',
       function: {
         timeout: 300,
+        environment: {
+          TABLE_NAME: feeds.tableName,
+          ALLOWED_EMAILS: process.env.ALLOWED_EMAILS || '',
+        },
       },
     },
     routes: {
-      'GET /sync': 'packages/functions/src/sync.get',
-      'POST /sync': 'packages/functions/src/sync.post',
+      'GET /sync/pull': 'packages/functions/src/sync.get',
+      'POST /sync/push': 'packages/functions/src/sync.post',
     },
   })
 

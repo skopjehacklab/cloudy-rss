@@ -1,5 +1,5 @@
+import { ChangesObject, PullParameters } from '@cloudy-rss/shared'
 import { FeedTable, FeedItemTable, UserFeedItemReadTable, UserSubscriptionTable } from './model'
-import { ChangesObject, PullParameters } from './sync-types'
 
 function splitData<T extends { deleted: boolean; createdAt: number; updatedAt: number }>(
   data: T[],
@@ -24,12 +24,12 @@ export async function pullChanges(
 ): Promise<ChangesResponse> {
   let pullResponse: ChangesObject = {
     feeds: { created: [], updated: [], deleted: [] },
-    feedItemReads: { created: [], updated: [], deleted: [] },
+    userFeedItemReads: { created: [], updated: [], deleted: [] },
     feedItems: { created: [], updated: [], deleted: [] },
     userSubscriptions: { created: [], updated: [], deleted: [] },
   }
-
   let timestamp = Date.now()
+
   let userSubscriptions = await UserSubscriptionTable.query
     .byUserId({ userId })
     .where((attr, op) => op.gt(attr.updatedAt, params.lastPulledAt))
@@ -68,7 +68,7 @@ export async function pullChanges(
     })
     .go()
 
-  pullResponse.feedItemReads = splitData(feedItemReads.data, params.lastPulledAt)
+  pullResponse.userFeedItemReads = splitData(feedItemReads.data, params.lastPulledAt)
 
   return { changes: pullResponse, timestamp }
 }

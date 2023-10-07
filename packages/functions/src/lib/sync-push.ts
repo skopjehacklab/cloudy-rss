@@ -1,13 +1,5 @@
-import { join } from 'path'
-import {
-  FeedTable,
-  FeedItemTable,
-  UserFeedItemReadTable,
-  UserSubscriptionTable,
-  FeedSyncronisationTable,
-} from './model'
-import { ChangeSpecs, ChangesObject, PullParameters } from './sync-types'
-import { FeedSyncronisation } from '@cloudy-rss/shared'
+import { UserFeedItemReadTable, UserSubscriptionTable, FeedSyncronisationTable } from './model'
+import { ChangeSpecs, ChangesObject, FeedSyncronisation } from '@cloudy-rss/shared'
 
 function joinChanges<T>(changes: ChangeSpecs<T>) {
   return changes.created.concat(changes.updated, changes.deleted)
@@ -15,8 +7,10 @@ function joinChanges<T>(changes: ChangeSpecs<T>) {
 export async function pushChanges(userId: string, changes: ChangesObject) {
   let userSubscriptions = joinChanges(changes.userSubscriptions).filter(x => x.userId === userId)
 
-  // This can get expensive over time, but we're only processing updates since last sync
+  console.log(changes.userSubscriptions)
+  console.log(userId)
 
+  // This can get expensive over time, but we're only processing updates since last sync
   if (userSubscriptions.length > 0) {
     let synchronizationsRequests = await FeedSyncronisationTable.get(
       userSubscriptions.map(({ url }) => ({ url }))
@@ -50,19 +44,19 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
     }))
 
     // We are assuming there won't be many changes, so we can do them one at a time
-    let changeSubscriptions = await Promise.all(
+    await Promise.all(
       fixedSubscriptions
         .filter(x => x.userId === userId)
         .map(x => UserSubscriptionTable.upsert({ ...x, updatedAt: Date.now() }).go())
     )
   }
 
-  let feedItemReads = joinChanges(changes.feedItemReads)
+  let feedItemReads = joinChanges(changes.userFeedItemReads)
 
   if (feedItemReads.length > 0) {
     // We might need to be careful here if we implement mass read/unread functionality
     let changeItemReads = await Promise.all(
-      joinChanges(changes.feedItemReads)
+      joinChanges(changes.userFeedItemReads)
         .filter(x => x.userId === userId)
         .map(x => UserFeedItemReadTable.upsert(x).go())
     )

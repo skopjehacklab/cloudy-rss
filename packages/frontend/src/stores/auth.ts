@@ -1,6 +1,22 @@
 import { writable, get } from 'svelte/store'
 import * as oidcClient from 'oidc-client-ts'
 import { browser } from '$app/environment'
+import type { IdTokenClaims } from 'oidc-client-ts'
+
+type JWTUserInfo = {
+  aud: string
+  email: string
+  email_verified: boolean
+  exp: number
+  family_name: string
+  given_name: string
+  iat: number
+  iss: string
+  locale: string
+  name: string
+  picture: string
+  sub: string
+}
 
 export type AuthenticationState =
   | {
@@ -8,13 +24,13 @@ export type AuthenticationState =
       authError?: string
       accessToken?: string
       idToken?: string
-      userInfo?: any
+      userInfo?: JWTUserInfo
     }
   | {
       state: 'Authenticated'
       accessToken: string
       idToken?: string
-      userInfo: any
+      userInfo: JWTUserInfo
     }
 
 function hasAuthParams(location = window.location): boolean {
@@ -60,7 +76,7 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
       state: 'Authenticated',
       accessToken: user.access_token,
       idToken: user.id_token,
-      userInfo: user.profile
+      userInfo: user.profile as JWTUserInfo
     })
   })
 
@@ -110,7 +126,7 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
         state: 'Authenticated',
         accessToken: currentUser.access_token,
         idToken: currentUser.id_token,
-        userInfo: currentUser.profile
+        userInfo: currentUser.profile as JWTUserInfo
       })
     }
     try {
@@ -124,7 +140,7 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
           state: 'Authenticated',
           accessToken: currentUser.access_token,
           idToken: currentUser.id_token,
-          userInfo: currentUser.profile
+          userInfo: currentUser.profile as JWTUserInfo
         })
         // clear auth params (code, id_token, access_token etc) from URL
         window.history.replaceState({}, '', window.location.pathname)
