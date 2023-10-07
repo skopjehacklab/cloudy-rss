@@ -66,6 +66,5 @@
     </div>
   </div>
   <Sidebar slot="sidebar" />
-
-  <div class="ml-80"><slot /></div>
+  <slot />
 </Appshell>

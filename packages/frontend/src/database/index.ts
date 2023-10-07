@@ -32,8 +32,8 @@ class CloudyRSSDatabase extends Dexie {
     this.version(1).stores({
       feeds: '$$feedId',
       feedItems: '$$guid,feedId',
-      userFeedItemReads: '$$guid',
-      userSubscriptions: '$$feedId,url',
+      userFeedItemReads: '$$guid,feedId',
+      userSubscriptions: '$$url,feedId',
       dbMetadata: 'key'
     })
 
