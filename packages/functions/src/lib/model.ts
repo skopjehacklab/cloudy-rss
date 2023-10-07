@@ -130,8 +130,8 @@ export let FeedTable = new Entity(
           width: { type: 'number', default: FeedImageDefaultWidth },
         },
       },
-      lastBuildDate: { type: 'number' },
-      pubDate: { type: 'number' },
+      lastBuildDate: { type: 'string' },
+      pubDate: { type: 'string' },
 
       skipDays: { type: 'list', items: { type: 'string' } },
       skipHours: { type: 'list', items: { type: 'number' } },
@@ -195,7 +195,7 @@ export let FeedItemTable = new Entity(
     },
     attributes: {
       feedId: { type: 'string', required: true },
-      pubDate: { type: 'number', required: true },
+      pubDate: { type: 'string', required: true },
       guid: { type: 'string', required: true },
       title: { type: 'string', required: true },
       description: { type: 'string', required: true },
@@ -206,9 +206,9 @@ export let FeedItemTable = new Entity(
       enclosure: {
         type: 'map',
         properties: {
-          type: { type: 'string', required: true },
+          type: { type: 'string' },
           url: { type: 'string', required: true },
-          length: { type: 'number', required: true },
+          length: { type: 'number' },
         },
       },
       createdAt: {

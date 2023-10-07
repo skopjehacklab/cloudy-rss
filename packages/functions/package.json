@@ -14,8 +14,9 @@
     "vitest": "^0.34.4"
   },
   "dependencies": {
+    "@cloudy-rss/shared": "file:@cloudy-rss/shared",
     "electrodb": "^2.10.0",
-    "uuid": "^9.0.1",
-    "@cloudy-rss/shared": "file:@cloudy-rss/shared"
+    "rss-parser": "^3.13.0",
+    "uuid": "^9.0.1"
   }
 }

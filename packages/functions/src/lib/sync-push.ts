@@ -5,10 +5,11 @@ function joinChanges<T>(changes: ChangeSpecs<T>) {
   return changes.created.concat(changes.updated, changes.deleted)
 }
 export async function pushChanges(userId: string, changes: ChangesObject) {
-  let userSubscriptions = joinChanges(changes.userSubscriptions).filter(x => x.userId === userId)
+  let lastUpdatedAt = Date.now()
 
-  console.log(changes.userSubscriptions)
-  console.log(userId)
+  let userSubscriptions = joinChanges(changes.userSubscriptions)
+    .map(x => ({ ...x, updatedAt: lastUpdatedAt }))
+    .filter(x => x.userId === userId)
 
   // This can get expensive over time, but we're only processing updates since last sync
   if (userSubscriptions.length > 0) {
@@ -47,7 +48,7 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
     await Promise.all(
       fixedSubscriptions
         .filter(x => x.userId === userId)
-        .map(x => UserSubscriptionTable.upsert({ ...x, updatedAt: Date.now() }).go())
+        .map(x => UserSubscriptionTable.upsert({ ...x, updatedAt: lastUpdatedAt }).go())
     )
   }
 
@@ -58,7 +59,7 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
     let changeItemReads = await Promise.all(
       joinChanges(changes.userFeedItemReads)
         .filter(x => x.userId === userId)
-        .map(x => UserFeedItemReadTable.upsert(x).go())
+        .map(x => UserFeedItemReadTable.upsert({ ...x, updatedAt: lastUpdatedAt }).go())
     )
   }
 }

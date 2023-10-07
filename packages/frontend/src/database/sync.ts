@@ -32,6 +32,10 @@ const DatabaseChangeTypeMap = {
   [DatabaseChangeType.Delete]: 'deleted' as const
 }
 
+const InverseDatabaseChangeTypeMap = Object.fromEntries(
+  Object.entries(DatabaseChangeTypeMap).map(([k, v]) => [v, k])
+)
+
 type DexieToBackend<
   ObjectType,
   ChangeType extends IDatabaseChange
@@ -46,12 +50,20 @@ type DexieToBackend<
 function dexieChangeToBackendChange<T>(change: IDatabaseChange): T | string {
   if (change.type == DatabaseChangeType.Create) return change.obj as T
   if (change.type == DatabaseChangeType.Update) return change.obj as T
-  if (change.type == DatabaseChangeType.Delete) return change.key as string
+  if (change.type == DatabaseChangeType.Delete)
+    return Object.assign({}, change.oldObj, { deleted: true }) as T
+
   throw new Error('Unknown change type')
 }
 
 function dexieChangeListToChangesObject(changes: IDatabaseChange[]): ChangesObject {
-  return Object.fromEntries(
+  let baseChangesObject: ChangesObject = {
+    userFeedItemReads: { created: [], updated: [], deleted: [] },
+    userSubscriptions: { created: [], updated: [], deleted: [] },
+    feeds: { created: [], updated: [], deleted: [] },
+    feedItems: { created: [], updated: [], deleted: [] }
+  }
+  let augmentedChanges = Object.fromEntries(
     changes
       .group(c => c.table)
       .map(([tableName, changes]) => [
@@ -59,10 +71,26 @@ function dexieChangeListToChangesObject(changes: IDatabaseChange[]): ChangesObje
         Object.fromEntries(
           changes
             .group(c => DatabaseChangeTypeMap[c.type])
-            .map(([type, changes]) => [type, changes.map((c = dexieChangeToBackendChange))])
+            .map(([type, changes]) => [type, changes.map(dexieChangeToBackendChange)])
         )
       ])
   ) as ChangesObject
+
+  return Object.assign(baseChangesObject, augmentedChanges)
+}
+
+function changesObjectToDexieChangelist(changes: ChangesObject): IDatabaseChange[] {
+  return Object.entries(changes).flatMap(([tableName, changes]) =>
+    Object.entries(changes).flatMap(([type, changes]) =>
+      changes.map((change: any) => ({
+        table: tableName,
+        type: InverseDatabaseChangeTypeMap[type],
+        obj: type === 'deleted' ? undefined : change,
+        oldObj: type === 'deleted' ? change : undefined
+        // TODO: unclear if deleted changes need object ID or not
+      }))
+    )
+  )
 }
 
 export class DBSyncronizer implements ISyncProtocol {
@@ -101,15 +129,24 @@ export class DBSyncronizer implements ISyncProtocol {
       onChangesAccepted,
       onSuccess,
       onError
-    })
+    }).then(
+      () => {
+        console.log('sync done')
+        onSuccess({ again: this.opts.syncInterval ?? 60 * 1000 })
+      },
+      err => {
+        console.error('sync error', err)
+        onError(err)
+      }
+    )
   }
 
   async syncAsync(args: {
     context: IPersistedContext
     url: string
     options: any
-    baseRevision: any
-    syncedRevision: any
+    baseRevision: number
+    syncedRevision: number
     changes: IDatabaseChange[]
     partial: boolean
     applyRemoteChanges: ApplyRemoteChangesFunction
@@ -117,49 +154,44 @@ export class DBSyncronizer implements ISyncProtocol {
     onSuccess: (continuation: PollContinuation | ReactiveContinuation) => void
     onError: (error: any, again?: number | undefined) => void
   }): Promise<void> {
-    let currentToken = await waitUntilDefined(this.opts.token)
-    let { changes, lastPulledAt } = await this.pullChanges({
-      lastPulledAt: args.syncedRevision,
-      schemaVersion: args.context.db.verno,
-      migration: args.context.db._cfg.migration
-    })
-    await args.applyRemoteChanges(changes, lastPulledAt)
+    console.log('Syncing from', args.baseRevision, 'last synced revision', args.syncedRevision)
 
-    let changesObject = dexieChangeListToChangesObject(
-      args.changes.filter(c => TablesToSync.includes(c.table))
-    )
+    let { changes, lastUpdatedAt } = await this.pullChanges(args.syncedRevision)
+    let incomingDexieChanges = changesObjectToDexieChangelist(changes)
+    await args.applyRemoteChanges(incomingDexieChanges, lastUpdatedAt) // will update syncedRevision
 
-    await this.pushChanges(changesObject as ChangesObject, args.baseRevision)
+    let outgoingDexieChanges = args.changes.filter(c => TablesToSync.includes(c.table))
+    if (outgoingDexieChanges.length > 0) {
+      let outgoingChanges = dexieChangeListToChangesObject(outgoingDexieChanges)
+      await this.pushChanges(outgoingChanges, args.baseRevision)
+    }
     args.onChangesAccepted()
-
-    args.onSuccess({
-      again: this.opts.syncInterval ?? 60 * 1000
-    })
   }
 
-  private async pullChanges(args: {
-    lastPulledAt: string | undefined
-    schemaVersion: number
-    migration: any
-  }) {
+  private async pullChanges(
+    lastPulledAtStart: number | undefined,
+    schemaVersion: number = 1,
+    migration: any = {}
+  ): Promise<{ changes: ChangesObject; lastUpdatedAt: number }> {
     let currentToken = await waitUntilDefined(this.opts.token)
-    console.log('pulling changes:', args.lastPulledAt)
-    const urlParams = `lastPulledAt=${args.lastPulledAt ?? 0}&schemaVersion=${
-      args.schemaVersion
-    }&migration=${encodeURIComponent(JSON.stringify(args.migration))}`
+    console.log('pulling changes:', lastPulledAtStart)
+
+    const urlParams = `lastPulledAt=${
+      lastPulledAtStart ?? 0
+    }&schemaVersion=${schemaVersion}&migration=${encodeURIComponent(JSON.stringify(migration))}`
+
     const response = await fetch(`${this.opts.apiUrl}/sync/pull?${urlParams}`, {
       headers: {
         Authorization: `Bearer ${currentToken}`
       }
     })
+
     if (!response.ok) {
       throw new Error(await response.text())
     }
 
-    const { changes, lastPulledAt } = await response.json()
-
-    console.log(lastPulledAt, changes)
-    return { changes, lastPulledAt }
+    const { changes, lastUpdatedAt } = await response.json()
+    return { changes, lastUpdatedAt }
   }
 
   async pushChanges(changes: ChangesObject, lastPulledAt: number | undefined) {

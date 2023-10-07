@@ -1,12 +1,13 @@
 import type * as types from '@cloudy-rss/shared'
 import { Dexie } from 'dexie'
-import { setContext } from 'svelte'
-import { get, type Readable } from 'svelte/store'
+import { getContext, setContext } from 'svelte'
+import type { Readable } from 'svelte/store'
 import { v4 } from 'uuid'
 import { DBSyncronizer } from './sync'
 
 import 'dexie-observable'
 import 'dexie-syncable'
+import { waitUntilDefined } from './util'
 
 export type CloudyRSSDatabaseOptions = {
   autoSyncInterval?: number
@@ -37,7 +38,6 @@ class CloudyRSSDatabase extends Dexie {
     })
 
     Dexie.Syncable.registerSyncProtocol('watermelon', new DBSyncronizer(this.opts))
-    this.syncable.connect('watermelon', this.opts.apiUrl)
   }
 
   private async getMetadata(key: string) {
@@ -52,66 +52,7 @@ class CloudyRSSDatabase extends Dexie {
   private syncInterval?: ReturnType<typeof setInterval>
 
   startAutoSync() {
-    this.syncInterval = setInterval(() => {
-      let currentToken = get(this.opts.token)
-      if (!currentToken) {
-        return
-      }
-      this.dbSync(this.opts.apiUrl, currentToken)
-    }, this.opts.autoSyncInterval)
-  }
-  stopAutoSync() {
-    this.syncInterval && clearInterval(this.syncInterval)
-  }
-
-  async sync() {
-    let currentToken = await waitUntilDefined(this.opts.token)
-    await this.dbSync(this.opts.apiUrl, currentToken!)
-  }
-
-  private async getUnsentChanges(): Promise<types.ChangesObject> {
-    let lastPull = (await this.getMetadata('lastPulledAt')) ?? 0
-    let us = this.userSubscriptions.where('updatedAt').above(lastPull).toArray()
-    let ufir = this.userFeedItemReads.where('updatedAt').above(lastPull).toArray()
-    // For now, we'll send all updates as updates, not as creates or deletes
-
-    let [userSubscriptions, userFeedItemReads] = await Promise.all([us, ufir])
-    return {
-      userSubscriptions: { updated: userSubscriptions, created: [], deleted: [] },
-      userFeedItemReads: { updated: userFeedItemReads, created: [], deleted: [] },
-      // we dont have feeds or feeditems to change
-      feeds: { updated: [], created: [], deleted: [] },
-      feedItems: { updated: [], created: [], deleted: [] }
-    }
-  }
-
-  private async putReceivedChanges(
-    changes: types.ChangesObject,
-    lastPulledAt: number
-  ): Promise<void> {
-    // We receive all changes, including fedeItems and feeds
-    // We need to take into account created and deleted too
-
-    let recvTime = Date.now()
-
-    let { userSubscriptions, userFeedItemReads, feedItems, feeds } = changes
-
-    let us = this.userSubscriptions.bulkPut(
-      userSubscriptions.updated.concat(userSubscriptions.created)
-    )
-    let ufir = this.userFeedItemReads.bulkPut(
-      userFeedItemReads.updated.concat(userFeedItemReads.created)
-    )
-    let fi = this.feedItems.bulkPut(feedItems.updated.concat(feedItems.created))
-    let f = this.feeds.bulkPut(feeds.updated.concat(feeds.created))
-
-    // execute deletions
-    let usd = this.userSubscriptions.bulkDelete(userSubscriptions.deleted.map(x => x.feedId))
-    let ufird = this.userFeedItemReads.bulkDelete(userFeedItemReads.deleted.map(x => x.guid))
-    let fid = this.feedItems.bulkDelete(feedItems.deleted.map(x => x.guid))
-    let fd = this.feeds.bulkDelete(feeds.deleted.map(x => x.feedId))
-
-    await this.setMetadata('lastPulledAt', lastPulledAt.toString())
+    this.syncable.connect('watermelon', this.opts.apiUrl)
   }
 
   private parseJWT(token: string) {
@@ -126,9 +67,10 @@ class CloudyRSSDatabase extends Dexie {
     return `google:${payload['sub']}`
   }
 
-  async addSubscription(url: string, requestedFrequency: number = 300) {
+  async addSubscription(url: string, requestedFrequency: number = 600) {
     let currentToken = await waitUntilDefined(this.opts.token)
 
+    console.log('Adding user subscription for', url)
     return await this.userSubscriptions.put({
       url,
       feedId: v4(),
@@ -139,6 +81,13 @@ class CloudyRSSDatabase extends Dexie {
       requestedFrequency
     })
   }
+  async listSubscriptions() {
+    let subs = await this.userSubscriptions.toArray()
+    let relatedFeeds = Object.fromEntries(
+      (await this.feeds.toArray()).map(feed => [feed.feedId, feed])
+    )
+    return subs.map(sub => ({ sub, feed: relatedFeeds[sub.feedId] }))
+  }
 }
 
 const DB_CONTEXT_KEY = 'clodyrss:db'
@@ -146,7 +95,7 @@ const DB_CONTEXT_KEY = 'clodyrss:db'
 export function createDBContext(opts: CloudyRSSDatabaseOptions) {
   let db = new CloudyRSSDatabase(opts)
   setContext(DB_CONTEXT_KEY, db)
-  db.sync()
+  db.startAutoSync()
   return db
 }
 

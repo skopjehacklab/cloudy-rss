@@ -1,4 +1,4 @@
-import { StackContext, Api, EventBus, StaticSite, Cron, Table, Config } from 'sst/constructs'
+import { StackContext, Api, EventBus, StaticSite, Cron, Table, Function } from 'sst/constructs'
 
 export function CloudyRSS({ stack }: StackContext) {
   if (!process.env.GOOGLE_CLIENT_ID) {
@@ -28,9 +28,16 @@ export function CloudyRSS({ stack }: StackContext) {
     },
   })
 
+  let cronJob = new Function(stack, 'cronjob', {
+    handler: 'packages/functions/src/cron.handler',
+    environment: {
+      TABLE_NAME: feeds.tableName,
+    },
+  })
+
   let cron = new Cron(stack, 'cron', {
-    job: 'packages/functions/src/cron.handler',
-    schedule: 'rate(5 minutes)',
+    job: cronJob,
+    schedule: 'rate(2 minutes)',
   })
 
   cron.attachPermissions([feeds])

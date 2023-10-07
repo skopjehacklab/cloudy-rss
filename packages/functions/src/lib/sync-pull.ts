@@ -15,7 +15,7 @@ function splitData<T extends { deleted: boolean; createdAt: number; updatedAt: n
 
 type ChangesResponse = {
   changes: ChangesObject
-  timestamp: number
+  lastUpdatedAt: number
 }
 
 export async function pullChanges(
@@ -28,7 +28,7 @@ export async function pullChanges(
     feedItems: { created: [], updated: [], deleted: [] },
     userSubscriptions: { created: [], updated: [], deleted: [] },
   }
-  let timestamp = Date.now()
+  let lastUpdatedAt = Date.now()
 
   let userSubscriptions = await UserSubscriptionTable.query
     .byUserId({ userId })
@@ -70,5 +70,5 @@ export async function pullChanges(
 
   pullResponse.userFeedItemReads = splitData(feedItemReads.data, params.lastPulledAt)
 
-  return { changes: pullResponse, timestamp }
+  return { changes: pullResponse, lastUpdatedAt }
 }

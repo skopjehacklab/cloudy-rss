@@ -34,8 +34,8 @@ export type Feed = {
   }
   category?: string
 
-  lastBuildDate?: number
-  pubDate?: number
+  lastBuildDate?: string
+  pubDate?: string
 
   skipDays?: string[]
   skipHours?: number[]
@@ -48,7 +48,7 @@ export type Feed = {
 
 export type FeedItem = {
   feedId: string
-  pubDate: number
+  pubDate: string
   guid: string
   title: string
   description: string
@@ -57,9 +57,9 @@ export type FeedItem = {
 
   link: string
   enclosure?: {
-    type: string
+    type?: string
     url: string
-    length: number
+    length?: number
   }
 
   createdAt: number
@@ -90,7 +90,7 @@ export type UserFeedItemRead = {
 export type ChangeSpecs<T> = {
   created: Array<T>
   updated: Array<T>
-  deleted: Array<string>
+  deleted: Array<T>
 }
 
 export type Timestamp = number

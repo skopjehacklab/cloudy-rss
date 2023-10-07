@@ -48,6 +48,7 @@ export const post = ApiHandler(async evt => {
   let body = useJsonBody()
 
   console.log(body)
+
   await pushChanges(auth.uid, body)
 
   return {

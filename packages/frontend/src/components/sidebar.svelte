@@ -5,6 +5,7 @@
   import { v4 as uuid } from 'uuid'
   import { useModal } from './modal/store'
   import { Avatar, Button, Spinner } from 'flowbite-svelte'
+  import { liveQuery } from 'dexie'
 
   let modal = useModal()
 
@@ -31,7 +32,7 @@
     return u.hostname
   }
 
-  let subs = db.collections.userSubscriptions.query().observe()
+  let subs = liveQuery(() => db.listSubscriptions())
 </script>
 
 <div class="flex justify-between items-center px-3 py-2">
@@ -47,24 +48,30 @@
 <nav class="list-nav">
   {#if $subs != null}
     <ul>
-      {#each $subs as sub}
-        {#if sub.relFeed?.url}
-          <li class="flex items-center space-x-4">
-            <img
-              class="w-10 h-10 rounded-full"
-              src="/docs/images/people/profile-picture-5.jpg"
-              alt=""
-            />
-            <div class="font-medium dark:text-white">
-              <div>Jese Leos</div>
-              <div class="text-sm text-gray-500 dark:text-gray-400">Joined in August 2014</div>
-            </div>
-            <a href={sub.relFeed?.url}>{sub.relFeed.title}</a>
+      {#each $subs as item}
+        {#if item.feed}
+          <li>
+            <a
+              class="flex items-center space-x-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-700"
+              href="/feed/{item.feed.feedId}"
+            >
+              <img
+                class="w-10 max-h-10 rounded-full"
+                src={item.feed.image?.url}
+                alt={item.feed.image?.title}
+              />
+              <div class="font-medium dark:text-white">
+                <div class="text underline-offset-2 underline">{item.feed.title}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">
+                  {item.feed.description}
+                </div>
+              </div>
+            </a>
           </li>
-        {:else if sub.url}
+        {:else if item.sub.url}
           <li class="flex items-center space-x-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-700">
             <Spinner size="6" />
-            <p>{shortenUrl(sub.url)}</p>
+            <p>{shortenUrl(item.sub.url)}</p>
           </li>
         {/if}
       {/each}
