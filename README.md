@@ -35,9 +35,9 @@ graph TD
 ### Frontend
 
  - SvelteKit (SPA adapter) - https://kit.svelte.dev/
- - SkeletonUI (tailwind based) - https://www.skeleton.dev/
- - WatermelonDB - https://watermelondb.dev/
- - OpenID - TODO
+ - Flowbite (tailwind based) - https://flowbite-svelte.vercel.app/
+ - DexieJS + Dexie Sync - https://github.com/dexie/Dexie.js
+ - OpenID via oidc-client-ts and google auth - [TODO](https://github.com/authts/oidc-client-ts)
 
  ### Infra
  - SST - https://sst.dev/
@@ -48,3 +48,21 @@ graph TD
  ### Backend
  - TypeScript
  - ElectroDB - https://electrodb.dev/
+
+## Development setup
+
+SST uses your current AWS profile to deploy a development instance of everything. 
+The region is currently hardcoded to `eu-west-2` (London)
+
+The only bit of configuration you will need is a Google OpenID application. To set that up:
+
+1. Create a new OpenID application with Google at https://console.cloud.google.com/apis/credentials/oauthclient
+2. Copy the `.env.example` to `.env.local` and fill in the credentials from the above
+
+### Running
+
+To start the backend in development mode, use `npm run dev`
+
+To start the frontend in development mode, use `cd packages/frontend && npm run dev`
+
+If anything goes wrong with the backend stack, you can use `npm run sst remove`
