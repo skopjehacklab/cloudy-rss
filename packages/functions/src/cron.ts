@@ -39,8 +39,11 @@ export async function handler() {
       syncsToProcess.push(feedSyncState)
     }
   }
-  console.log('Running sync in parallel')
-  await Promise.all(syncsToProcess.map(syncFeed))
+  console.log('Running sync in batches')
+  for (let k = 0; k < syncsToProcess.length; k += 10) {
+    console.log('Current batch offset', k)
+    await Promise.all(syncsToProcess.slice(k, k + 10).map(syncFeed))
+  }
 }
 
 async function syncFeed(feedSync: FeedSyncronisation) {
@@ -52,7 +55,7 @@ async function syncFeed(feedSync: FeedSyncronisation) {
       pubDate?: string
       skipDays?: string[]
       skipHours?: number[]
-      ttl?: number
+      ttl?: string
     },
     {
       description?: string
@@ -93,7 +96,7 @@ async function syncFeed(feedSync: FeedSyncronisation) {
     pubDate: feed.pubDate,
     skipDays: feed.skipDays,
     skipHours: feed.skipHours,
-    ttl: feed.ttl,
+    ttl: feed.ttl ? Number(feed.ttl) : undefined,
     // link: feed.link,
   }
   await FeedTable.upsert(feedObject).go()

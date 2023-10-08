@@ -72,7 +72,7 @@ export function CloudyRSS({ stack }: StackContext) {
 
   let web = new StaticSite(stack, 'web', {
     path: 'packages/frontend',
-    buildOutput: 'dist',
+    buildOutput: 'build',
     buildCommand: 'npm run build',
     environment: {
       VITE_PUBLIC_API_URL: api.url,

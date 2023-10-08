@@ -6,6 +6,11 @@ import { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda/trigger/api-
 
 let allowedEmails = process.env.ALLOWED_EMAILS?.split(',') || []
 
+function checkAllowedEmails(email: string) {
+  if (allowedEmails[0] === '*') return true
+  return allowedEmails.includes(email)
+}
+
 function getAuthorizationContext(e: APIGatewayProxyEventV2WithJWTAuthorizer) {
   let claims = e.requestContext.authorizer.jwt.claims
   let email = e.requestContext.authorizer.jwt.claims['email'] as string
@@ -18,7 +23,7 @@ function getAuthorizationContext(e: APIGatewayProxyEventV2WithJWTAuthorizer) {
 export const get = ApiHandler(async evt => {
   let auth = getAuthorizationContext(evt as APIGatewayProxyEventV2WithJWTAuthorizer)
 
-  if (!allowedEmails.includes(auth.email)) {
+  if (!checkAllowedEmails(auth.email)) {
     return {
       statusCode: 403,
       body: `User ${auth.email} is not allowed to access this resource`,
@@ -38,7 +43,7 @@ export const get = ApiHandler(async evt => {
 
 export const post = ApiHandler(async evt => {
   let auth = getAuthorizationContext(evt as APIGatewayProxyEventV2WithJWTAuthorizer)
-  if (!allowedEmails.includes(auth.email)) {
+  if (!checkAllowedEmails(auth.email)) {
     return {
       statusCode: 403,
       body: `User ${auth.email} is not allowed to access this resource`,

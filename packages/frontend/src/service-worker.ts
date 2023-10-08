@@ -42,7 +42,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
     const cache = await caches.open(CACHE)
 
     // `build`/`files` can always be served from the cache
-    if (ASSETS.includes(url.pathname)) {
+    if (url.origin === location.origin && ASSETS.includes(url.pathname)) {
       return (await cache.match(url.pathname))!
     }
 
