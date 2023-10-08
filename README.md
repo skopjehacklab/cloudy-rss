@@ -23,7 +23,7 @@ graph TD
   DynamoDB[(DynamoDB)]
   updateLambda[Update Lambda]
   syncLambda[Sync Lambda]
-  watermelondb[(WatermelonDB)]
+  dexiejs[(DexieJS)]
 
   cron --> updateLambda --> DynamoDB
   frontend --> watermelondb --> syncLambda --> DynamoDB
