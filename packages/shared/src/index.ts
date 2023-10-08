@@ -52,6 +52,7 @@ export type FeedItem = {
   guid: string
   title: string
   description: string
+  content?: string
   author?: string
   category?: string
 

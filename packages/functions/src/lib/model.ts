@@ -199,6 +199,7 @@ export let FeedItemTable = new Entity(
       guid: { type: 'string', required: true },
       title: { type: 'string', required: true },
       description: { type: 'string', required: true },
+      content: { type: 'string' },
       link: { type: 'string', required: true },
 
       author: { type: 'string' },

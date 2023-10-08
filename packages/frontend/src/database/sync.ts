@@ -79,14 +79,19 @@ function dexieChangeListToChangesObject(changes: IDatabaseChange[]): ChangesObje
   return Object.assign(baseChangesObject, augmentedChanges)
 }
 
+// Todo: we must create update objects as per spec here
+// https://dexie.org/docs/Syncable/Dexie.Syncable.IDatabaseChange
+// Deletes must be a key, while updates must contain update paths and values
+// To work around this limitation and force dexie to always use bulkPut
+// we can represent all types of changes as creates
 function changesObjectToDexieChangelist(changes: ChangesObject): IDatabaseChange[] {
   return Object.entries(changes).flatMap(([tableName, changes]) =>
     Object.entries(changes).flatMap(([type, changes]) =>
       changes.map((change: any) => ({
         table: tableName,
-        type: InverseDatabaseChangeTypeMap[type],
-        obj: type === 'deleted' ? undefined : change,
-        oldObj: type === 'deleted' ? change : undefined
+        type: InverseDatabaseChangeTypeMap['created'],
+        obj: change, //type === 'deleted' ? change : change,
+        oldObj: change //type === 'deleted' ? change : change
         // TODO: unclear if deleted changes need object ID or not
       }))
     )
@@ -158,7 +163,7 @@ export class DBSyncronizer implements ISyncProtocol {
 
     let { changes, lastUpdatedAt } = await this.pullChanges(args.syncedRevision)
     let incomingDexieChanges = changesObjectToDexieChangelist(changes)
-    await args.applyRemoteChanges(incomingDexieChanges, lastUpdatedAt) // will update syncedRevision
+    await args.applyRemoteChanges(incomingDexieChanges, lastUpdatedAt) // will update sync rev
 
     let outgoingDexieChanges = args.changes.filter(c => TablesToSync.includes(c.table))
     if (outgoingDexieChanges.length > 0) {

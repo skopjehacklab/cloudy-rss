@@ -30,25 +30,14 @@ class CloudyRSSDatabase extends Dexie {
   constructor(private opts: CloudyRSSDatabaseOptions) {
     super('cloudyrss')
     this.version(1).stores({
-      feeds: '$$feedId',
-      feedItems: '$$guid,feedId',
-      userFeedItemReads: '$$guid,feedId',
-      userSubscriptions: '$$url,feedId',
-      dbMetadata: 'key'
+      feeds: '$$feedId,updatedAt',
+      feedItems: '$$guid,feedId,updatedAt',
+      userFeedItemReads: 'guid,feedId,updatedAt',
+      userSubscriptions: 'url,feedId,updatedAt'
     })
 
     Dexie.Syncable.registerSyncProtocol('watermelon', new DBSyncronizer(this.opts))
   }
-
-  private async getMetadata(key: string) {
-    let item = await this.dbMetadata.get(key)
-    return item?.value
-  }
-
-  private async setMetadata(key: string, value: string) {
-    await this.dbMetadata.put({ key, value })
-  }
-
   private syncInterval?: ReturnType<typeof setInterval>
 
   startAutoSync() {

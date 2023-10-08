@@ -58,11 +58,13 @@ async function syncFeed(feedSync: FeedSyncronisation) {
       description?: string
       author?: string
       category?: string
+      'content:encoded'?: string
     }
   >({
     defaultRSS: 2.0,
     customFields: {
       feed: ['author', 'category', 'lastBuildDate', 'pubDate', 'skipDays', 'skipHours', 'ttl'],
+      item: ['author', 'category', 'description', 'content:encoded'],
     },
   })
 
@@ -107,11 +109,12 @@ async function syncFeed(feedSync: FeedSyncronisation) {
     enclosure: item.enclosure
       ? {
           url: item.enclosure.url,
-          length: item.enclosure.length,
+          length: item.enclosure.length ? Number(item.enclosure.length) : undefined,
           type: item.enclosure.type,
         }
       : undefined,
     pubDate: item.pubDate!,
+    content: item['content:encoded'],
     createdAt: Date.now(),
     updatedAt: Date.now(),
     deleted: false,

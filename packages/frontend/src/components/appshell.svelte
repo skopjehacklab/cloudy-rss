@@ -11,6 +11,6 @@
   <slot name="sidebar" />
 </aside>
 
-<div class="p-4 md:ml-80 h-auto pt-20">
+<div class="md:ml-80 h-auto pt-14">
   <slot />
 </div>
