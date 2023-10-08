@@ -26,7 +26,7 @@ graph TD
   dexiejs[(DexieJS)]
 
   cron --> updateLambda --> DynamoDB
-  frontend --> watermelondb --> syncLambda --> DynamoDB
+  frontend --> dexiejs --> syncLambda --> DynamoDB
 ```
 
  ## Tech stack
