@@ -2,9 +2,7 @@
   import { liveQuery } from 'dexie'
   import { useDB } from '../../../database'
   import { page } from '$app/stores'
-  import { get, writable } from 'svelte/store'
   import sanitizeHtml from 'sanitize-html'
-  import type { FeedItem } from '@cloudy-rss/shared'
 
   let sanitizeOptions: sanitizeHtml.IOptions = {
     allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
@@ -16,19 +14,13 @@
 
   let db = useDB()
 
-  $: pageId = get(page).params.id
-
-  let s = writable([] as FeedItem[])
-
-  $: feedItems = pageId
-    ? liveQuery(async () => {
-        let feedId = pageId
-        console.log('Fetching for', feedId)
-        let items = await db.feedItems.where('feedId').equals(feedId).reverse().limit(10).toArray()
-        console.log('Found items', items)
-        return items
-      })
-    : s
+  $: feedItems = liveQuery(async () => {
+    let feedId = $page.params.id
+    console.log('Fetching for', feedId)
+    let items = await db.feedItems.where('feedId').equals(feedId).reverse().limit(10).toArray()
+    console.log('Found items', items)
+    return items
+  })
 </script>
 
 <article
