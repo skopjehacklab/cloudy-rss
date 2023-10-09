@@ -8,7 +8,7 @@ Requirements
 - Add feeds to sync
 - Refresh my feeds
 - Mark items read/unread
-- Offline-first, cache feed (and everything else) locally
+- Local-first, cache feed (and everything else), make sure its usable offline (e.g. airplane)
 - PWA, Mobile friendly
 
 Technical requirements
