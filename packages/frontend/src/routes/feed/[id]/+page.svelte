@@ -16,9 +16,7 @@
 
   $: feedItems = liveQuery(async () => {
     let feedId = $page.params.id
-    console.log('Fetching for', feedId)
-    let items = await db.feedItems.where('feedId').equals(feedId).reverse().limit(10).toArray()
-    console.log('Found items', items)
+    let items = await db.feedItems.where('feedId').equals(feedId).reverse().limit(100).toArray()
     return items
   })
 </script>
@@ -28,7 +26,11 @@
 >
   {#if $feedItems && $feedItems.length > 0}
     {#each $feedItems as item}
-      <h2>{item.title}</h2>
+      <h2>
+        <a href={item.link}>
+          {item.title}
+        </a>
+      </h2>
       <div>
         {@html item.content
           ? sanitizeHtml(item.content, sanitizeOptions)

@@ -32,6 +32,10 @@
     return u.hostname
   }
 
+  function initials(name: string) {
+    return name.split(" ").map(w => w[0].toUpperCase()).filter(l => l.match(/[A-Z]/)).slice(0,3).join('')
+  }
+
   let subs = liveQuery(() => db.listSubscriptions())
 </script>
 
@@ -55,11 +59,7 @@
               class="flex items-center space-x-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-700"
               href="/feed/{item.feed.feedId}"
             >
-              <img
-                class="w-10 max-h-10 rounded-full"
-                src={item.feed.image?.url}
-                alt={item.feed.image?.title}
-              />
+              <Avatar class="bg-stone-100" src={item.feed.image?.url}>{initials(item.feed.title)}</Avatar>
               <div class="font-medium dark:text-white">
                 <div class="text underline-offset-2 underline">{item.feed.title}</div>
                 <div class="text-sm text-gray-500 dark:text-gray-400">
