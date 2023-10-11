@@ -1,4 +1,4 @@
-import { StackContext, Api, EventBus, StaticSite, Cron, Table, Function } from 'sst/constructs'
+import { StackContext, Api, StaticSite, Cron, Table, Function } from 'sst/constructs'
 
 export function CloudyRSS({ stack }: StackContext) {
   if (!process.env.GOOGLE_CLIENT_ID) {
