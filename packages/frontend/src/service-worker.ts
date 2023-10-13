@@ -37,8 +37,13 @@ self.addEventListener('fetch', (event: FetchEvent) => {
   // ignore POST requests etc
   if (event.request.method !== 'GET') return
 
+  const url = new URL(event.request.url)
+
+  // Do not cache API sync requests
+  if (url.origin === location.origin && url.pathname.startsWith('/api/sync')) {
+    return
+  }
   async function respond() {
-    const url = new URL(event.request.url)
     const cache = await caches.open(CACHE)
 
     // `build`/`files` can always be served from the cache

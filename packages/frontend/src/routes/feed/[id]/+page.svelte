@@ -1,7 +1,7 @@
 <script lang="ts">
   import { liveQuery } from 'dexie'
   import { useDB } from '../../../database'
-  import { page } from '$app/stores'
+  import { page, updated } from '$app/stores'
   import sanitizeHtml from 'sanitize-html'
 
   let sanitizeOptions: sanitizeHtml.IOptions = {
@@ -16,7 +16,7 @@
 
   $: feedItems = liveQuery(async () => {
     let feedId = $page.params.id
-    let items = await db.feedItems.where('feedId').equals(feedId).reverse().limit(100).toArray()
+    let items = await db.feedItems.where({ feedId }).reverse().limit(100).toArray()
     return items
   })
 </script>

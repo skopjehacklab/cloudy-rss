@@ -1,5 +1,8 @@
 import type * as types from '@cloudy-rss/shared'
 import { Dexie } from 'dexie'
+
+import type { Table } from 'dexie-better-types'
+
 import { getContext, setContext } from 'svelte'
 import type { Readable } from 'svelte/store'
 import { v4 } from 'uuid'
@@ -21,11 +24,11 @@ type DBMetadata = {
 }
 
 class CloudyRSSDatabase extends Dexie {
-  feeds!: Dexie.Table<types.Feed, string>
-  feedItems!: Dexie.Table<types.FeedItem, string>
-  userFeedItemReads!: Dexie.Table<types.UserFeedItemRead, string>
-  userSubscriptions!: Dexie.Table<types.UserSubscription, string>
-  dbMetadata!: Dexie.Table<DBMetadata, string>
+  feeds!: Table<types.Feed, string>
+  feedItems!: Table<types.FeedItem, string>
+  userFeedItemReads!: Table<types.UserFeedItemRead, string>
+  userSubscriptions!: Table<types.UserSubscription, string>
+  dbMetadata!: Table<DBMetadata, string>
 
   constructor(private opts: CloudyRSSDatabaseOptions) {
     super('cloudyrss')

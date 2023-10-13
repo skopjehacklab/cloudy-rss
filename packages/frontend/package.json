@@ -25,6 +25,7 @@
 		"@types/serviceworker": "^0.0.74",
 		"autoprefixer": "^10.4.14",
 		"dexie": "^3.2.4",
+		"dexie-better-types": "^1.0.2",
 		"dexie-observable": "^4.0.1-beta.13",
 		"dexie-syncable": "^4.0.1-beta.13",
 		"flowbite": "^1.8.1",
