@@ -108,8 +108,8 @@ async function syncFeed(feedSync: FeedSyncronisation) {
     .byFeedIdUpdatedAt({ feedId: feedSync.feedId })
     .go({ limit: 1, order: 'desc' })
 
-  let lastItemTimestamp = lastUpdatedItem.data[0].updatedAt
-  let lastConsideredTimestamp = lastItemTimestamp - MaxUpsertAge
+  let lastItemTimestamp = lastUpdatedItem.data[0]?.updatedAt ?? 0
+  let lastConsideredTimestamp = Math.max(0, lastItemTimestamp - MaxUpsertAge)
 
   let feedItems: FeedItem[] = feed.items
     .filter(item => !item.pubDate || new Date(item.pubDate).valueOf() > lastConsideredTimestamp)
