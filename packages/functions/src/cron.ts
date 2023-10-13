@@ -10,6 +10,9 @@ import Parser from 'rss-parser'
 
 const MinFeedAge = 5 * 60 * 1000
 
+// Maximum item age relative to previously updatedAt item
+const MaxUpsertAge = 5 * 60 * 1000
+
 export async function handler() {
   console.log('Running cron job')
 
@@ -101,29 +104,39 @@ async function syncFeed(feedSync: FeedSyncronisation) {
   }
   await FeedTable.upsert(feedObject).go()
 
-  let feedItems: FeedItem[] = feed.items.map(item => ({
-    feedId: feedSync.feedId,
-    guid: item.guid ?? item.link!,
-    title: item.title ?? '',
-    description: item.description ?? '',
-    author: item.author ?? '',
-    category: item.category,
-    link: item.link!,
-    enclosure: item.enclosure
-      ? {
-          url: item.enclosure.url,
-          length: item.enclosure.length ? Number(item.enclosure.length) : undefined,
-          type: item.enclosure.type,
-        }
-      : undefined,
-    pubDate: item.pubDate!,
-    content: item['content:encoded'],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    deleted: false,
-  }))
+  let lastUpdatedItem = await FeedItemTable.query
+    .byFeedIdUpdatedAt({ feedId: feedSync.feedId })
+    .go({ limit: 1, order: 'desc' })
+
+  let lastItemTimestamp = lastUpdatedItem.data[0].updatedAt
+  let lastConsideredTimestamp = lastItemTimestamp - MaxUpsertAge
+
+  let feedItems: FeedItem[] = feed.items
+    .filter(item => !item.pubDate || new Date(item.pubDate).valueOf() > lastConsideredTimestamp)
+    .map(item => ({
+      feedId: feedSync.feedId,
+      guid: item.guid ?? item.link!,
+      title: item.title ?? '',
+      description: item.description ?? '',
+      author: item.author ?? '',
+      category: item.category,
+      link: item.link!,
+      enclosure: item.enclosure
+        ? {
+            url: item.enclosure.url,
+            length: item.enclosure.length ? Number(item.enclosure.length) : undefined,
+            type: item.enclosure.type,
+          }
+        : undefined,
+      pubDate: item.pubDate!,
+      content: item['content:encoded'],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deleted: false,
+    }))
 
   // TODO: put does not update items, only inserts
+  console.log('Will update', feedItems.length, 'of', feed.items.length, 'items for', feedSync.url)
   await FeedItemTable.put(feedItems).go()
 
   await FeedSyncronisationTable.update({
