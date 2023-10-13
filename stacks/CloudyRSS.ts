@@ -10,6 +10,12 @@ export function CloudyRSS({ stack }: StackContext) {
   }
 
   let feeds = new Table(stack, 'feeds', {
+    cdk: {
+      table: {
+        readCapacity: 2,
+        writeCapacity: 2,
+      },
+    },
     fields: {
       pk: 'string',
       sk: 'string',
@@ -30,6 +36,7 @@ export function CloudyRSS({ stack }: StackContext) {
 
   let cronJob = new Function(stack, 'cronjob', {
     handler: 'packages/functions/src/cron.handler',
+    runtime: 'nodejs18.x',
     environment: {
       TABLE_NAME: feeds.tableName,
     },
