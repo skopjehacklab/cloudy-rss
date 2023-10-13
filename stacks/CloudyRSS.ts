@@ -10,12 +10,6 @@ export function CloudyRSS({ stack }: StackContext) {
   }
 
   let feeds = new Table(stack, 'feeds', {
-    cdk: {
-      table: {
-        readCapacity: 2,
-        writeCapacity: 2,
-      },
-    },
     fields: {
       pk: 'string',
       sk: 'string',
