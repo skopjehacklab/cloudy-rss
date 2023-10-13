@@ -31,6 +31,7 @@ export function CloudyRSS({ stack }: StackContext) {
   let cronJob = new Function(stack, 'cronjob', {
     handler: 'packages/functions/src/cron.handler',
     runtime: 'nodejs18.x',
+    timeout: '2 minutes',
     environment: {
       TABLE_NAME: feeds.tableName,
     },
