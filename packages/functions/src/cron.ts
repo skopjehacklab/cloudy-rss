@@ -13,7 +13,7 @@ const MinFeedAge = 5 * 60 * 1000
 // Maximum item age relative to previously updatedAt item
 const MaxUpsertAge = 5 * 60 * 1000
 
-// Do not retry to sync failed feeds more often than every 10m
+// Do not retry to sync failed feeds more often than every 15m
 const MinSyncAgeFailedFeed = 15 * 60 * 1000
 
 function enhanceError(msg: string) {
@@ -102,9 +102,11 @@ async function syncFeed(feedSync: FeedSyncronisation) {
 
   try {
     console.log('Attempting to fetch feed', feedSync.url)
+    let req = await fetch(feedSync.url).catch(enhanceError(`Failed to fetch ${feedSync.url}`))
+    let text = await req.text().catch(enhanceError(`Failed to read ${feedSync.url}`))
     let feed = await parser
-      .parseURL(feedSync.url)
-      .catch(enhanceError(`Failed to process ${feedSync.url}`))
+      .parseString(text)
+      .catch(enhanceError(`Failed to process ${feedSync.url} status ${req.status} body ${text}`))
 
     let feedObject: Feed = {
       url: feedSync.url,
