@@ -100,6 +100,7 @@ function changesObjectToDexieChangelist(changes: ChangesObject): IDatabaseChange
 
 export class DBSyncronizer implements ISyncProtocol {
   private syncInterval?: ReturnType<typeof setInterval>
+  private syncTimeout?: ReturnType<typeof setTimeout>
 
   constructor(
     private opts: {
@@ -135,13 +136,52 @@ export class DBSyncronizer implements ISyncProtocol {
       onSuccess,
       onError
     }).then(
-      () => {
-        console.log('sync done')
-        onSuccess({ again: this.opts.syncInterval ?? 60 * 1000 })
+      syncedRevision => {
+        console.log('initial sync done')
+
+        let pullSync = async () => {
+          console.log('polling for server changes')
+          let { changes, lastUpdatedAt } = await this.pullChanges(syncedRevision)
+          let incomingDexieChanges = changesObjectToDexieChangelist(changes)
+          await applyRemoteChanges(incomingDexieChanges, lastUpdatedAt) // will update sync rev
+          syncedRevision = lastUpdatedAt
+        }
+
+        this.syncInterval = setInterval(pullSync, this.opts.syncInterval ?? 60 * 1000)
+
+        onSuccess({
+          // again: this.opts.syncInterval ?? 10 * 1000
+          react: async (changes, baseRevision, partial, onChangesAccepted) => {
+            let outgoingDexieChanges = changes.filter(c => TablesToSync.includes(c.table))
+            if (outgoingDexieChanges.length > 0) {
+              let outgoingChanges = dexieChangeListToChangesObject(outgoingDexieChanges)
+              await this.pushChanges(outgoingChanges, baseRevision)
+
+              //Reschedule sync, one 1 second later and one for the regular interval
+              if (this.syncTimeout) {
+                clearTimeout(this.syncTimeout)
+              }
+              this.syncTimeout = setTimeout(pullSync, 1 * 1000)
+              if (this.syncInterval) {
+                clearInterval(this.syncInterval)
+              }
+              this.syncInterval = setInterval(pullSync, this.opts.syncInterval ?? 60 * 1000)
+            }
+            onChangesAccepted()
+          },
+          disconnect: () => {
+            if (this.syncInterval) {
+              clearInterval(this.syncInterval)
+            }
+            if (this.syncTimeout) {
+              clearTimeout(this.syncTimeout)
+            }
+          }
+        })
       },
       err => {
         console.error('sync error', err)
-        onError(err)
+        onError(err, this.opts.syncInterval ?? 60 * 1000)
       }
     )
   }
@@ -158,7 +198,7 @@ export class DBSyncronizer implements ISyncProtocol {
     onChangesAccepted: () => void
     onSuccess: (continuation: PollContinuation | ReactiveContinuation) => void
     onError: (error: any, again?: number | undefined) => void
-  }): Promise<void> {
+  }): Promise<number> {
     console.log('Syncing from', args.baseRevision, 'last synced revision', args.syncedRevision)
 
     let { changes, lastUpdatedAt } = await this.pullChanges(args.syncedRevision)
@@ -171,6 +211,8 @@ export class DBSyncronizer implements ISyncProtocol {
       await this.pushChanges(outgoingChanges, args.baseRevision)
     }
     args.onChangesAccepted()
+
+    return lastUpdatedAt
   }
 
   private async pullChanges(

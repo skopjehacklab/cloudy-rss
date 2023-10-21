@@ -28,9 +28,11 @@ class CloudyRSSDatabase extends Dexie {
   feedItems!: Table<types.FeedItem, string>
   userFeedItemReads!: Table<types.UserFeedItemRead, string>
   userSubscriptions!: Table<types.UserSubscription, string>
-  dbMetadata!: Table<DBMetadata, string>
 
   constructor(private opts: CloudyRSSDatabaseOptions) {
+    if (!opts.apiUrl) {
+      throw new Error('apiUrl is required')
+    }
     super('cloudyrss')
     this.version(1).stores({
       feeds: '$$feedId,updatedAt',
@@ -63,7 +65,7 @@ class CloudyRSSDatabase extends Dexie {
     let currentToken = await waitUntilDefined(this.opts.token)
 
     console.log('Adding user subscription for', url)
-    return await this.userSubscriptions.put({
+    let sub = {
       url,
       feedId: v4(),
       userId: this.getUserId(currentToken!),
@@ -71,7 +73,8 @@ class CloudyRSSDatabase extends Dexie {
       updatedAt: Date.now(),
       deleted: false,
       requestedFrequency
-    })
+    }
+    return await this.userSubscriptions.put(sub, url)
   }
   async listSubscriptions() {
     let subs = await this.userSubscriptions.toArray()

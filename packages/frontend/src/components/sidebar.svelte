@@ -7,6 +7,9 @@
   import { Avatar, Button, Spinner } from 'flowbite-svelte'
   import { liveQuery } from 'dexie'
 
+  import { page } from '$app/stores'
+  import { get } from 'svelte/store'
+
   let modal = useModal()
 
   let db = useDB()
@@ -42,6 +45,8 @@
   }
 
   let subs = liveQuery(() => db.listSubscriptions())
+
+  $: console.log($page.url.pathname)
 </script>
 
 <div class="flex justify-between items-center px-3 py-2">
@@ -59,7 +64,11 @@
     <ul>
       {#each $subs as item}
         {#if item.feed}
-          <li>
+          <li
+            class={$page.url.pathname == `/feed/${item.feed.feedId}`
+              ? 'bg-gray-100 dark:bg-gray-700'
+              : ''}
+          >
             <a
               class="flex items-center space-x-4 p-3 hover:bg-gray-100 dark:hover:bg-gray-700"
               href="/feed/{item.feed.feedId}"

@@ -1,7 +1,8 @@
-import { writable, get } from 'svelte/store'
+import { writable, get, type Writable } from 'svelte/store'
 import * as oidcClient from 'oidc-client-ts'
 import { browser } from '$app/environment'
 import type { IdTokenClaims } from 'oidc-client-ts'
+import { getContext, setContext } from 'svelte'
 
 type JWTUserInfo = {
   aud: string
@@ -52,62 +53,51 @@ function hasAuthParams(location = window.location): boolean {
   return false
 }
 
-/**
- * Store
- */
-export function createAuthStore(settings: oidcClient.UserManagerSettings) {
-  if (!browser) {
-    return {
-      authState: writable<AuthenticationState>({ state: 'LoggedOut' }),
-      login: () => {},
-      refreshToken: () => {},
-      logout: () => {},
-      handleOnMount: () => {}
-    }
+class AuthStore {
+  private userManager: oidcClient.UserManager
+  public authState: Writable<AuthenticationState>
+
+  constructor(options: oidcClient.UserManagerSettings) {
+    this.userManager = new oidcClient.UserManager({
+      ...options,
+      userStore: new oidcClient.WebStorageStateStore({ store: window.localStorage })
+    })
+    this.authState = writable<AuthenticationState>({ state: 'Loading' })
+    this.userManager.events.addUserLoaded(user => {
+      this.authState.set({
+        state: 'Authenticated',
+        accessToken: user.access_token,
+        idToken: user.id_token,
+        userInfo: user.profile as JWTUserInfo
+      })
+    })
+    this.userManager.events.addUserUnloaded(() => {
+      this.authState.set({ state: 'LoggedOut' })
+    })
+    this.userManager.events.addSilentRenewError((e: Error) => {
+      this.authState.set({
+        ...get(this.authState),
+        state: 'LoggedOut',
+        authError: `SilentRenewError: ${e.message}`
+      })
+    })
   }
-  let authState = writable<AuthenticationState>({ state: 'Loading' })
-  let userManager = new oidcClient.UserManager({
-    ...settings,
-    userStore: new oidcClient.WebStorageStateStore({ store: window.localStorage })
-  })
-
-  userManager.events.addUserLoaded(function (user) {
-    authState.set({
-      state: 'Authenticated',
-      accessToken: user.access_token,
-      idToken: user.id_token,
-      userInfo: user.profile as JWTUserInfo
-    })
-  })
-
-  userManager.events.addUserUnloaded(function () {
-    authState.set({ state: 'LoggedOut' })
-  })
-
-  userManager.events.addSilentRenewError(function (e: Error) {
-    authState.set({
-      ...get(authState),
-      state: 'LoggedOut',
-      authError: `SilentRenewError: ${e.message}`
-    })
-  })
-
-  async function refreshToken() {
+  private async refreshToken() {
     try {
-      await userManager.signinSilent()
+      await this.userManager.signinSilent()
     } catch (e: unknown) {
-      authState.set({
-        ...get(authState),
+      this.authState.set({
+        ...get(this.authState),
         state: 'LoggedOut',
         authError: (e as Error).message ?? 'Unknown error'
       })
     }
   }
 
-  async function logout(returnTo: string = window.location.href) {
-    return userManager.signoutRedirect({ post_logout_redirect_uri: returnTo })
+  async logout(returnTo: string = window.location.href) {
+    return this.userManager.signoutRedirect({ post_logout_redirect_uri: returnTo })
   }
-  async function login(preserveRoute: boolean = true, redirect_uri: string = window.location.href) {
+  async login(preserveRoute: boolean = true, redirect_uri: string = window.location.href) {
     // try to keep the user on the same page from which they triggered login. If set to false should typically
     // cause redirect to /.
     const appState = preserveRoute
@@ -116,14 +106,15 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
           search: window.location.search
         }
       : {}
-    await userManager.signinRedirect({ redirect_uri, state: appState })
+    await this.userManager.signinRedirect({ redirect_uri, state: appState })
   }
 
-  async function handleOnMount() {
-    let currentUser = await userManager.getUser()
-    if (currentUser && !currentUser.expired) {
-      authState.set({
-        state: 'Authenticated',
+  async handleOnMount() {
+    let currentUser = await this.userManager.getUser()
+    console.log(currentUser)
+    if (currentUser) {
+      this.authState.set({
+        state: currentUser.expired ? 'LoggedOut' : 'Authenticated',
         accessToken: currentUser.access_token,
         idToken: currentUser.id_token,
         userInfo: currentUser.profile as JWTUserInfo
@@ -131,12 +122,12 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
     }
     try {
       if (hasAuthParams()) {
-        authState.set({ state: 'Loading' })
-        await userManager.signinCallback()
-        let currentUser = await userManager.getUser()
+        this.authState.set({ state: 'Loading' })
+        await this.userManager.signinCallback()
+        let currentUser = await this.userManager.getUser()
         if (!currentUser) throw new Error('SigninCallback failed: no user')
 
-        authState.set({
+        this.authState.set({
           state: 'Authenticated',
           accessToken: currentUser.access_token,
           idToken: currentUser.id_token,
@@ -147,17 +138,29 @@ export function createAuthStore(settings: oidcClient.UserManagerSettings) {
         return
       }
     } catch (e: unknown) {
-      authState.set({
-        ...get(authState),
+      this.authState.set({
+        ...get(this.authState),
         state: 'LoggedOut',
         authError: (e as Error).message ?? 'Unknown error'
       })
       return
     }
   }
-  async function handleOnDestroy() {
+  async handleOnDestroy() {
     // TODO: remove callbacks
   }
+}
 
-  return { authState, login, refreshToken, logout, handleOnMount, handleOnDestroy }
+const AUTH_CONTEXT_KEY = 'clodyrss:auth'
+
+export function createAuthContext(opts: oidcClient.UserManagerSettings) {
+  let authStore = new AuthStore(opts)
+  setContext(AUTH_CONTEXT_KEY, authStore)
+  authStore.handleOnMount()
+  return authStore
+}
+
+export function useAuth() {
+  let auth = getContext<AuthStore>(AUTH_CONTEXT_KEY)
+  return auth
 }

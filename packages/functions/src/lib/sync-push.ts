@@ -1,5 +1,6 @@
 import { UserFeedItemReadTable, UserSubscriptionTable, FeedSyncronisationTable } from './model'
 import { ChangeSpecs, ChangesObject, FeedSyncronisation } from '@cloudy-rss/shared'
+import { syncFeed } from './sync-rss'
 
 function joinChanges<T>(changes: ChangeSpecs<T>) {
   return changes.created.concat(changes.updated, changes.deleted)
@@ -32,6 +33,11 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
 
     // Make sure they are added to the database
     await Promise.all(missingSyncronizations.map(x => FeedSyncronisationTable.upsert(x).go()))
+
+    // Run an early sync on the missing subscriptions, for UX reasons, but ignore if it fails
+    try {
+      await Promise.all(missingSyncronizations.map(syncFeed))
+    } catch (e) {}
 
     let feedIdByUrl = new Map([
       ...missingSyncronizations.map(x => [x.url, x.feedId] as const),

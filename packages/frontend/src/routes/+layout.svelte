@@ -6,7 +6,7 @@
   import { browser } from '$app/environment'
   import Appshell from '../components/appshell.svelte'
   import { createModalContext } from '../components/modal/store'
-  import { createAuthStore } from '../stores/auth'
+  import { createAuthContext } from '../stores/auth'
 
   import { UserCircleSolid } from 'flowbite-svelte-icons'
 
@@ -19,13 +19,13 @@
 
   createModalContext()
 
-  let authStore = createAuthStore({
+  let authStore = createAuthContext({
     authority: 'https://accounts.google.com',
     client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
     client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET,
     scope: 'openid profile email',
     redirect_uri: `${browser ? window.location.origin : ''}`
-    // silent_redirect_uri: `${browser ? window.location.host : ''}/silent-oidc.html`,
+    // silent_redirect_uri: `${browser ? window.location.host : ''}/silent-oidc.html`
   })
 
   authStore.handleOnMount()
@@ -33,7 +33,7 @@
   let authState = authStore.authState
 
   let _db = createDBContext({
-    autoSyncInterval: 60 * 1000,
+    autoSyncInterval: 90 * 1000,
     apiUrl: ApiUrl,
     token: derived(authState, as => as.idToken)
   })
