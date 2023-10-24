@@ -65,7 +65,7 @@
       {#each $subs as item}
         {#if item.feed}
           <li
-            class={$page.url.pathname == `/feed/${item.feed.feedId}`
+            class={$page.url.pathname.startsWith(`/feed/${item.feed.feedId}`)
               ? 'bg-gray-100 dark:bg-gray-700'
               : ''}
           >

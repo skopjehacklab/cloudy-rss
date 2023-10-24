@@ -3,7 +3,7 @@ import { ChangeSpecs, ChangesObject, FeedSyncronisation } from '@cloudy-rss/shar
 import { syncFeed } from './sync-rss'
 
 function joinChanges<T>(changes: ChangeSpecs<T>) {
-  return changes.created.concat(changes.updated, changes.deleted)
+  return changes.created.concat(changes.updated || [], changes.deleted || [])
 }
 export async function pushChanges(userId: string, changes: ChangesObject) {
   let lastUpdatedAt = Date.now()
@@ -61,6 +61,7 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
   let feedItemReads = joinChanges(changes.userFeedItemReads)
 
   if (feedItemReads.length > 0) {
+    console.log('New reads', joinChanges(changes.userFeedItemReads))
     // We might need to be careful here if we implement mass read/unread functionality
     let changeItemReads = await Promise.all(
       joinChanges(changes.userFeedItemReads)

@@ -83,6 +83,35 @@ class CloudyRSSDatabase extends Dexie {
     )
     return subs.map(sub => ({ sub, feed: relatedFeeds[sub.feedId] }))
   }
+
+  async listFeedItems(feedId: string, page: number = 0, pageSize: number = 100) {
+    let items = await this.feedItems.where('feedId').equals(feedId).toArray()
+
+    items.sort((a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime())
+
+    items = items.slice(page * pageSize, (page + 1) * pageSize)
+
+    let reads = await this.userFeedItemReads.bulkGet(items.map(i => i.guid))
+
+    let readMap = new Map(reads.map(r => [r?.guid, r]))
+
+    let combined = items.map(item => ({ data: item, read: readMap.get(item.guid) }))
+
+    return combined
+  }
+
+  async markRead(guid: string) {
+    let currentToken = await waitUntilDefined(this.opts.token)
+    let userId = this.getUserId(currentToken!)
+    let read = {
+      guid,
+      userId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deleted: false
+    }
+    return await this.userFeedItemReads.put(read)
+  }
 }
 
 const DB_CONTEXT_KEY = 'clodyrss:db'
