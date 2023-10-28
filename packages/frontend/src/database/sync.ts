@@ -76,7 +76,12 @@ function dexieChangeListToChangesObject(changes: IDatabaseChange[]): ChangesObje
       ])
   ) as ChangesObject
 
-  return Object.assign(baseChangesObject, augmentedChanges)
+  Object.assign(baseChangesObject.feedItems, augmentedChanges.feedItems)
+  Object.assign(baseChangesObject.feeds, augmentedChanges.feeds)
+  Object.assign(baseChangesObject.userSubscriptions, augmentedChanges.userSubscriptions)
+  Object.assign(baseChangesObject.userFeedItemReads, augmentedChanges.userFeedItemReads)
+
+  return baseChangesObject
 }
 
 // Todo: we must create update objects as per spec here

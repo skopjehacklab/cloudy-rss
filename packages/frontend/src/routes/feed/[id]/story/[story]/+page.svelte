@@ -1,19 +1,13 @@
 <script lang="ts">
   import { liveQuery } from 'dexie'
   import { useDB } from '../../../../../database'
-  import { page, updated } from '$app/stores'
-  import sanitizeHtml from 'sanitize-html'
-  import FeedItemStory from '../../../../../components/feed-item-story.svelte'
-  import FeedItemSummary from '../../../../../components/feed-item-summary.svelte'
+  import { page } from '$app/stores'
+
+  import FeedStory from '../../../../../components/feed-item-story.svelte'
   import { onMount } from 'svelte'
   import { useAuth } from '../../../../../stores/auth'
+  import FeedItemList from '../../../../../components/feed-item-list.svelte'
   let db = useDB()
-
-  $: feedItems = liveQuery(async () => {
-    let feedId = $page.params.id
-    let items = await db.listFeedItems(feedId)
-    return items
-  })
 
   $: selectedItem = liveQuery(async () => {
     let storyId = $page.params.story
@@ -23,36 +17,22 @@
     return item
   })
 
-  let auth = useAuth()
-
-  let authState = auth.authState
-
   $: if ($selectedItem) {
     db.markRead($selectedItem.guid)
   }
 </script>
 
-<div class="fixed top-14 right-0 left-80 flex flex-row">
+<div class="fixed top-14 right-0 left-80 bottom-0 flex flex-row">
   <div
-    class="w-4/12 overflow-y-auto h-screen scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-500 dark:scrollbar-track-gray-800
+    class="overflow-y-auto h-full scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-500 dark:scrollbar-track-gray-800
     hidden xl:block"
   >
-    {#if $feedItems && $feedItems.length > 0}
-      {#each $feedItems as item}
-        <FeedItemSummary feedItem={item.data} feedItemRead={item.read} />
-      {/each}
-    {:else}
-      <p>No feed items found.</p>
-    {/if}
+    <FeedItemList feedId={$page.params.id} />
   </div>
 
   <div
-    class="overflow-y-auto h-screen flex-grow scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-500 dark:scrollbar-track-gray-800"
+    class="overflow-y-auto h-full flex-grow scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-200 dark:scrollbar-thumb-gray-500 dark:scrollbar-track-gray-800"
   >
-    {#if $selectedItem}
-      <FeedItemStory feedItem={$selectedItem} />
-    {:else}
-      <p>No selected item found.</p>
-    {/if}
+    <FeedStory storyId={$page.params.story} />
   </div>
 </div>

@@ -97,7 +97,13 @@ class AuthStore {
   async logout(returnTo: string = window.location.href) {
     return this.userManager.signoutRedirect({ post_logout_redirect_uri: returnTo })
   }
-  async login(preserveRoute: boolean = true, redirect_uri: string = window.location.href) {
+  async login(
+    preserveRoute: boolean = true,
+    redirect_uri: string = window.location.href.substring(
+      0,
+      window.location.href.indexOf(window.location.pathname)
+    ) + '/'
+  ) {
     // try to keep the user on the same page from which they triggered login. If set to false should typically
     // cause redirect to /.
     const appState = preserveRoute

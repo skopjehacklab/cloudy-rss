@@ -41,6 +41,9 @@ class CloudyRSSDatabase extends Dexie {
       userSubscriptions: 'url,feedId,updatedAt'
     })
 
+    this.version(2).stores({
+      userSubscriptions: 'url,feedId,updatedAt,deleted'
+    })
     Dexie.Syncable.registerSyncProtocol('watermelon', new DBSyncronizer(this.opts))
   }
   private syncInterval?: ReturnType<typeof setInterval>
@@ -77,11 +80,17 @@ class CloudyRSSDatabase extends Dexie {
     return await this.userSubscriptions.put(sub, url)
   }
   async listSubscriptions() {
-    let subs = await this.userSubscriptions.toArray()
+    let subs = await this.userSubscriptions.filter(s => !s.deleted).toArray()
+    console.log('Subs', subs)
+
     let relatedFeeds = Object.fromEntries(
       (await this.feeds.toArray()).map(feed => [feed.feedId, feed])
     )
     return subs.map(sub => ({ sub, feed: relatedFeeds[sub.feedId] }))
+  }
+
+  async deleteSubscription(url: string) {
+    return await this.userSubscriptions.update(url, { deleted: true })
   }
 
   async listFeedItems(feedId: string, page: number = 0, pageSize: number = 100) {
@@ -119,6 +128,9 @@ const DB_CONTEXT_KEY = 'clodyrss:db'
 export function createDBContext(opts: CloudyRSSDatabaseOptions) {
   let db = new CloudyRSSDatabase(opts)
   setContext(DB_CONTEXT_KEY, db)
+  if (window) {
+    ;(window as any).db = db
+  }
   db.startAutoSync()
   return db
 }
