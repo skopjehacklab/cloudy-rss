@@ -1,38 +1,38 @@
 import { FeedSyncronisation, Feed, FeedItem } from '@cloudy-rss/shared'
-import Parser from 'rss-parser'
+// import Parser from 'rss-parser'
 import { FeedSyncronisationTable, FeedTable, FeedItemTable } from './model'
 import { enhanceError } from './errors'
+import FeedParser from 'feedparser'
 
+async function parseFeed(
+  url: string,
+  text: string
+): Promise<{ items: FeedParser.Item[]; feed: FeedParser.Meta }> {
+  return new Promise((resolve, reject) => {
+    let fp = new FeedParser({
+      feedurl: url,
+    })
+    let result = { items: [] as any, feed: null as any }
+
+    fp.on('error', reject)
+    fp.on('readable', function () {
+      for (let post = fp.read(); post != null; post = fp.read()) {
+        result.items.push(post)
+      }
+    })
+    fp.on('meta', (meta: FeedParser.Meta) => (result.feed = meta))
+    fp.on('end', () => resolve(result))
+    fp.on('finish', () => resolve(result))
+
+    fp.end(text)
+  })
+}
 /**
  * Sync a single feed
  * @param feedSync the feed to sync
  * @param MaxUpsertAge the maximum age of an item relative to the last updated item to consider it for upsert
  */
 export async function syncFeed(feedSync: FeedSyncronisation, MaxUpsertAge: number = Infinity) {
-  let parser = new Parser<
-    {
-      author: string
-      category?: string
-      lastBuildDate?: string
-      pubDate?: string
-      skipDays?: string[]
-      skipHours?: number[]
-      ttl?: string
-    },
-    {
-      description?: string
-      author?: string
-      category?: string
-      'content:encoded'?: string
-    }
-  >({
-    defaultRSS: 2.0,
-    customFields: {
-      feed: ['author', 'category', 'lastBuildDate', 'pubDate', 'skipDays', 'skipHours', 'ttl'],
-      item: ['author', 'category', 'description', 'content:encoded'],
-    },
-  })
-
   await FeedSyncronisationTable.update({
     url: feedSync.url,
   })
@@ -46,27 +46,28 @@ export async function syncFeed(feedSync: FeedSyncronisation, MaxUpsertAge: numbe
     console.log('Attempting to fetch feed', feedSync.url)
     let req = await fetch(feedSync.url).catch(enhanceError(`Failed to fetch ${feedSync.url}`))
     let text = await req.text().catch(enhanceError(`Failed to read ${feedSync.url}`))
-    let feed = await parser
-      .parseString(text)
-      .catch(enhanceError(`Failed to process ${feedSync.url} status ${req.status} body ${text}`))
+
+    console.log('Parsing feed', feedSync.url)
+    let { feed, items } = await parseFeed(feedSync.url, text).catch(
+      enhanceError(`Failed to parse ${feedSync.url}`)
+    )
 
     let feedObject: Feed = {
       url: feedSync.url,
-      title: feed.title!,
+      title: feed.title,
       description: feed.description ?? '',
       feedId: feedSync.feedId,
       updatedAt: Date.now(),
       createdAt: Date.now(),
       deleted: false,
       author: feed.author ?? '',
-      category: feed.category,
-      image: feed.image as any,
-      lastBuildDate: feed.lastBuildDate,
-      pubDate: feed.pubDate,
-      skipDays: feed.skipDays,
-      skipHours: feed.skipHours,
-      ttl: feed.ttl ? Number(feed.ttl) : undefined,
-      // link: feed.link,
+      category: feed.categories?.join(','),
+      image: { link: feed.link, title: feed.image.title, url: feed.image.url },
+      lastBuildDate: feed.date?.toISOString() || new Date().toISOString(),
+      pubDate: feed.pubdate?.toISOString() || new Date().toISOString(),
+      skipDays: undefined,
+      skipHours: undefined,
+      ttl: undefined,
     }
     await FeedTable.upsert(feedObject).go()
 
@@ -77,32 +78,32 @@ export async function syncFeed(feedSync: FeedSyncronisation, MaxUpsertAge: numbe
     let lastItemTimestamp = lastUpdatedItem.data[0]?.updatedAt ?? 0
     let lastConsideredTimestamp = Math.max(0, lastItemTimestamp - MaxUpsertAge)
 
-    let feedItems: FeedItem[] = feed.items
-      .filter(item => !item.pubDate || new Date(item.pubDate).valueOf() > lastConsideredTimestamp)
+    let feedItems: FeedItem[] = items
+      .filter(item => !item.pubdate || item.pubdate.valueOf() > lastConsideredTimestamp)
       .map(item => ({
         feedId: feedSync.feedId,
         guid: item.guid ?? item.link!,
         title: item.title ?? '',
-        description: item.description ?? '',
+        description: item.summary ?? '',
         author: item.author ?? '',
-        category: item.category,
+        category: item.categories?.join(','),
         link: item.link!,
-        enclosure: item.enclosure
+        enclosure: item.enclosures
           ? {
-              url: item.enclosure.url,
-              length: item.enclosure.length ? Number(item.enclosure.length) : undefined,
-              type: item.enclosure.type,
+              url: item.enclosures[0].url,
+              length: item.enclosures[0].length ? Number(item.enclosures[0].length) : undefined,
+              type: item.enclosures[0].type,
             }
           : undefined,
-        pubDate: item.pubDate!,
-        content: item['content:encoded'],
+        pubDate: item.pubdate?.toISOString() ?? new Date().toISOString(),
+        content: item.description != item.summary ? item.description : undefined,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         deleted: false,
       }))
 
     // TODO: put does not update items, only inserts
-    console.log('Will update', feedItems.length, 'of', feed.items.length, 'items for', feedSync.url)
+    console.log('Will update', feedItems.length, 'of', items.length, 'items for', feedSync.url)
     await FeedItemTable.put(feedItems).go()
 
     await FeedSyncronisationTable.update({

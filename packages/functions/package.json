@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@cloudy-rss/shared": "file:@cloudy-rss/shared",
+    "@types/feedparser": "^2.2.7",
     "electrodb": "^2.10.0",
+    "feedparser": "^2.2.10",
     "rss-parser": "^3.13.0",
     "uuid": "^9.0.1"
   }

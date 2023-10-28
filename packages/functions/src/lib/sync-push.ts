@@ -65,7 +65,7 @@ export async function pushChanges(userId: string, changes: ChangesObject) {
     // We might need to be careful here if we implement mass read/unread functionality
     let changeItemReads = await Promise.all(
       joinChanges(changes.userFeedItemReads)
-        .filter(x => x.userId === userId)
+        .filter(x => x?.userId === userId)
         .map(x => UserFeedItemReadTable.upsert({ ...x, updatedAt: lastUpdatedAt }).go())
     )
   }
