@@ -1,6 +1,7 @@
+import { BillingMode } from 'aws-cdk-lib/aws-dynamodb'
 import { StackContext, Api, StaticSite, Cron, Table, Function } from 'sst/constructs'
 
-export function CloudyRSS({ stack }: StackContext) {
+export function CloudyRSS({ app, stack }: StackContext) {
   if (!process.env.GOOGLE_CLIENT_ID) {
     throw new Error('Missing GOOGLE_CLIENT_ID')
   }
@@ -8,6 +9,19 @@ export function CloudyRSS({ stack }: StackContext) {
   if (!process.env.GOOGLE_CLIENT_SECRET) {
     throw new Error('Missing GOOGLE_CLIENT_SECRET')
   }
+
+  // let tableProvisioning =
+  //   app.stage === 'prod'
+  //     ? {
+  //         cdk: {
+  //           table: {
+  //             billingMode: BillingMode.PROVISIONED,
+  //             readCapacity: 3,
+  //             writeCapacity: 3,
+  //           },
+  //         },
+  //       }
+  //     : {}
 
   let feeds = new Table(stack, 'feeds', {
     fields: {
@@ -26,6 +40,7 @@ export function CloudyRSS({ stack }: StackContext) {
         sortKey: 'gsi1sk',
       },
     },
+    // ...tableProvisioning,
   })
 
   let cronJob = new Function(stack, 'cronjob', {
