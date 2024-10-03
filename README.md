@@ -37,7 +37,7 @@ graph TD
  - SvelteKit (SPA adapter) - https://kit.svelte.dev/
  - Flowbite (tailwind based) - https://flowbite-svelte.vercel.app/
  - DexieJS + Dexie Sync - https://github.com/dexie/Dexie.js
- - OpenID via oidc-client-ts and google auth - [TODO](https://github.com/authts/oidc-client-ts)
+ - OpenID via oidc-client-ts and google auth - https://github.com/authts/oidc-client-ts
 
  ### Infra
  - SST - https://sst.dev/
